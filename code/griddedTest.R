@@ -4,7 +4,7 @@
 
 
 estPredMSErange = function(sigma=1, cov.args=list(Covariance="Matern", range=1, smoothness=1.0), 
-                       dists=exp(seq(log(.01), log(6), l=100)), nPts=500, doPlot=TRUE) {
+                           dists=exp(seq(log(.01), log(cov.args$range*6), l=100)), nPts=500, doPlot=TRUE) {
   
   # make points in unit radius ring around origin
   thetaRes = 2 * pi / nPts

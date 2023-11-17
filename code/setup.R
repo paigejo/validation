@@ -73,6 +73,7 @@ library(devtools)
 library(colorspace)
 library(TMB)
 library(plyr)
+library(deldir)
 
 inf = sessionInfo()
 if(inf$platform == "x86_64-apple-darwin17.0 (64-bit)") {
@@ -99,3 +100,5 @@ source("code/genPareto.R")
 source('code/griddedTest.R')
 source('code/sim.R')
 source('code/utilityFuns.R')
+source('code/voronoi.R')
+source('code/test.R')
