@@ -44,6 +44,543 @@ r2GRFs = function(nx=100, ny=100, mu1=0, mu2=mu1, sigma1=1, sigma2=sigma1, rho=-
   list(Y1=Y1, Y2=Y2)
 }
 
+# Use IWs:
+#   1/rateEsts from full dataset
+# Use control variates: 
+#   rateEsts (with mean 1)
+#   rateEsts2 (with mean 1)
+#   -------1/rateEstsVC from train data
+#   -------(and possibly rateEstsVC2/rateEstsVC from full dataset)
+# given n-vector of scores and n-vector of respective importance weights, 
+# uses weights as a control variate to reduce variance of IWCV estimator as in:
+# https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=8918731
+# (title: ROBUST IMPORTANCE-WEIGHTED CROSS-VALIDATION UNDER SAMPLE SELECTION BIAS)
+# and:
+# https://pdf.sciencedirectassets.com/271709/1-s2.0-S0305054800X01220/1-s2.0-0305054887900244/main.pdf?X-Amz-Security-Token=IQoJb3JpZ2luX2VjEF0aCXVzLWVhc3QtMSJHMEUCIQDYIUilf2rZt3kp5BtZJSc0pbR9LHBxj%2Bi4dP6lgOMwNQIgI1Zj8iiXCIPmm3df5aAEcEEDeiZUwwyU9Fi1uoOpqgkquwUIpv%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARAFGgwwNTkwMDM1NDY4NjUiDIMockogYU8iSbcZRiqPBalptBhbgcZk%2FOHN3L673fm1BPguBvCWT%2BiVMuQsJ3%2FJFed2lJZMajVHvy9K6fzDfdqV5wh1Sw2F1gD%2BQAlcAGMWsyL6KpOeHZFFvY%2FzWZnNncFAoh6YAfvNeS2CJUOEDbugd5UfpkmVrjjg2ZLs%2FrcJPAUJfQ5Qv5pJ1QUIc%2FOVTkMuvm%2F1lVYmLiKWWySniWUZmWDz5ncjo2NnrBQxVXn5mpsKLHHntKoOX0LXDlZtV%2BW8Co7aWDsZ6GuKaX9UXEYlGOBQ91Ub0e%2FB7wt1SXAHjUjrE6Fu3rUQ84Y9XKPTpf4gSuqGv757B%2BhL3CTGjksCFZfVfYr62q%2BFaiu5liUXbrgsajB%2B%2Fs%2F1mUjCiVEw1slA%2B4hxuCEJvqVzvAglnBtZY7YO5IYmGQhbl8Om%2FTLWmsoYBDLeQFIkBlwRCIMIT8BK149BWO9MIhwzMrbdDuBA2stJ7lw55TdlgDOaP3LxDmXbZdqROBdMGOumnS3FS2kYS0S9wBeiNeqnGue%2BLl74Vi%2FSczzhVR2t8mgZ2A%2Bwtwtz6sfkJx%2ByB7jDBZq2INHHweVVxJJlgA60wElWQTDSdyNLYkwGgWT3vFTfnWTtgzP2Amzb9ryND1Jbta%2FvgPthOYXJIx%2B5pz96Iaj%2FAN3%2B9A6IjMzLasMz5shw%2FYO96mYsswa%2Bts81XDlFYSm9F3Tu%2FjhNw2XB8eVmz0OM4BHYW1ulb%2FlJ3Err9M09hADniuH4t%2B4vM6oL6dRMBBjxwn%2FpJpah6%2BhV41VA3AUAaH5V1djx2%2FhwJnpG0VLRtrPeQk544om2pKQlvc5hoDglfsdprBRyAUQijyloqbVeEdCOwqAA9fKP%2BZ2sO744QS4lJECZcwBX41IUmJ6k%2FaswprjdqgY6sQEAQ6hqEkSyROTr0v6G1W2zp2elXtsYPQz304FZ6ZhJDmsVO7oO7LWBGbXP7sXfp1JwC9KzSyOTlSKOY%2BFizTs3W1DN4rF0mIgOA01vdfGVssP6E%2B8Aj7F5KK7%2BSo%2FQwVuQ2vg3MfExbofJPuD356MMTeTsDmNReR4idICgON%2FlBTQHDOT8LtsVlNWWlO%2BDIZ7%2FrKKnjA8eYQVPW2GaXivaBXTpc2eMB56nV0nTr6n5CwQ%3D&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20231117T130334Z&X-Amz-SignedHeaders=host&X-Amz-Expires=300&X-Amz-Credential=ASIAQ3PHCVTYSWMLUGWC%2F20231117%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Signature=2c444bcebe82a96504812f09276f43239537a7928ef30f321a7abb453b602456&hash=426e056f6481a649660b90486dc0fe46510d318a3d1f4e91f3d5a8ea5f265173&host=68042c943591013ac2b2430a89b270f6af2c76d8dfd086a07176afe7c76c2c61&pii=0305054887900244&tid=spdf-fd01066f-9212-46b8-b3b5-cf666bcfc21b&sid=2bed538a4721394ae01b7b10291f68b4853bgxrqb&type=client&tsoh=d3d3LnNjaWVuY2VkaXJlY3QuY29t&ua=1409595c58575c00030700&rr=82782caffbc3712d&cc=no
+# (title: ON CONTROL VARIATE ESTIMATORS, by Nelson)
+# and, for multivariate control variates:
+# https://pdf.sciencedirectassets.com/271697/1-s2.0-S0167637700X01356/1-s2.0-0167637786900982/main.pdf?X-Amz-Security-Token=IQoJb3JpZ2luX2VjEKP%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCXVzLWVhc3QtMSJHMEUCIFUBxwUyoIChChNo%2BLywmH52yGjc%2FBLuuZvuOyseYg%2BMAiEA78zBPAmEufDLYXNqp6ZoXalbrt7xPugg41jLVbCM%2FRMquwUI7P%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARAFGgwwNTkwMDM1NDY4NjUiDPMwSIwuAAjJnPGNACqPBfO6yl%2FQ%2BIyUxZPsCO2ryQTzSRSqdH71EJmzpZUtitsgrUPOxgLKNe41cIRpm9AYUiP6JE6LhEmZpselRd%2FvNAcUh%2BeK5g5xQT8sl%2Ft6%2Bp%2FHYd0bTtm9QlYEcP3QDaEUkjXDVIx159cVvg6ezi5sHW7bNGJmf7%2BTuwqgGkODQ5Squsxwguzg%2ByTSr81qT03rGek%2FAZM0nlEaUeXb0vPEhZqbcFItKUkFJZ5wiExXULmT%2BMDEXOY7SNFU4m9r%2BWvqC%2B%2FnRFJlknn1Z9yB6q4hTDUzVPw8vm1R0aaLUgUWTHHO0ofk%2FDi94htY26HujdrWuWG43QU4EpKodVwr1VjmeFN1Yw7WVAX3GcbY8TCu%2FqhKxZ0scHd%2F9BwMdhxdhgLO3CSvM4EbFwG%2FLZSS6mYianZaT%2F8TjqQcO%2Fmx47iKmENqatFmsp2r7ShGXwlvKk1DiYW4ohX4en7k%2BUwRfzJnThrPF2sfScA6Cwkc1SCwdnT52BFNg22YwzAffHUfG%2FYs9zP8Uq0ll1DcHH03ZsP9ePEd8F%2B5hG%2BeyF57cQUBCI%2BsUWJnB0mAt%2FVHon3m6SPKMi%2FKOLtNFvrNMin8IPEgIqChLlYTltF7lxgivFK8UvgoDb52oSD5eTgZFtgfno37zJSFEaDD%2B62yW70WESeWbsonxxUwPacsIhp%2BXzvAvYaIwsXlSZsju7Gy7WnLy2KXhYBImMUEocd4ZosvPo93%2Bfms7%2BZmXmEr%2F8IK7H8GbZuLZW4sZuJjFXnOVFP%2Bo%2BqKGqhtso%2BUgOXQV%2F1S%2FXZSv1KSKGzIelDIl%2Bjj5%2FgvCPpJuhavUqKKjH54FE%2BMo3L6RwDEH4D%2F1rY3xfVakw1PA6YIEZ9WKa%2BFnywsSf6nHlcwovTsqgY6sQFFr6y4g7yPlCq3VtsUZVlidJV2vz%2B7PrHoko%2Ftzhb8uMyXrC%2BL2FukrohULZQSzL19R0xiqcgGp4r%2BgR1KtwfUZgCougvs1u%2FCOkE17xioVJhq%2FYfKaGTot%2FIXzhz%2Fal5aEIvAanii8MGnFPk2KsOS5oag0XIyXjdctj%2BHS7yeoExfDOQnGSAqLqGosMyOCgWCPSYmN06gvbPUDhrSG5Bv4KtYfmvyx1QlsANW80dLdWg%3D&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20231120T114509Z&X-Amz-SignedHeaders=host&X-Amz-Expires=300&X-Amz-Credential=ASIAQ3PHCVTYV4GG6XJE%2F20231120%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Signature=d8c8004072e5a3954f437a6e9d95fb25dd18653149b47a0f110fb1371a905d04&hash=0350a15bda55c1d3fd34e904d776ecea05d941d219460f179fe792477a2eaed0&host=68042c943591013ac2b2430a89b270f6af2c76d8dfd086a07176afe7c76c2c61&pii=0167637786900982&tid=spdf-9dc4ae03-ce71-4055-b5c0-12b7e0a178d5&sid=56a9d21780efc14153682c316db1e857d7ffgxrqb&type=client&tsoh=d3d3LnNjaWVuY2VkaXJlY3QuY29t&ua=1409595c565f5952070750&rr=829071ef6832712a&cc=no
+# (title: THE EFFICIENCY OF CONTROL VARIATES IN MULTIRESPONSE SIMULATION)
+getRobustIWCV = function(scores, IWs=1, controlVarMat=IWs, controlVarMeans=1, wtdReg=FALSE, 
+                         tol = 1e-08, printVarRatio=FALSE, printRoot="", wtdMeanCentered=TRUE, 
+                         returnInfo=FALSE) {
+  k = length(scores)
+  
+  if(!wtdReg && !wtdMeanCentered) {
+    Ys = scores * IWs
+    controlVarMat = sweep(cbind(controlVarMat), 1, IWs, "*")
+    regWs = rep(1, k)
+  } else if(!wtdMeanCentered) {
+    Ys = scores
+    regWs = IWs
+  } else if(wtdMeanCentered) {
+    Ys=scores
+    regWs = rep(1, k)
+  }
+  
+  if(!is.matrix(controlVarMat)) {
+    q = 1 # number of control variates
+    if(length(scores) -2 - 1 <= 0) {
+      warning("fewer observations than control vars. Using 0 control vars...")
+      return(mean(IWs*scores))
+    }
+    controlVarMat = matrix(controlVarMat, ncol=1)
+    # NOTE: it's not exactly a classic SLR problem, since we know E[IWs] = 1
+    # mod = lm(weightedScores ~ IWs)
+    # beta = mod$coefficients[2]
+    # beta = sum((scores*IWs - mean(scores*IWs))*(IWs-1))/sum((IWs-1)^2)
+    # Ybar = weighted.mean(Ys)
+    # beta = sum((Ys - mean(Ys))*(controlVarMat-controlVarMeans))/sum((controlVarMat-controlVarMeans)^2)
+    
+    # out = c(scores * IWs - beta * (controlVarMat - controlVarMeans))
+  }
+  
+  q = ncol(controlVarMat)
+  if(length(scores) -2 - q <= 0) {
+    warning("fewer observations than control vars. Using 0 control vars...")
+    return(mean(IWs*scores))
+  }
+  if(length(controlVarMeans) == 1) {
+    controlVarMeans = rep(controlVarMeans, q)
+  }
+  
+  # using notation from "THE EFFICIENCY OF CONTROL VARIATES IN MULTIRESPONSE SIMULATION"
+  muC = controlVarMeans
+  C = controlVarMat
+  
+  # empirical covariance matrix of C (here, muC is known)
+  SC = matrix(0, nrow=ncol(C), ncol=ncol(C))
+  if(!wtdMeanCentered) {
+    for(j in 1:k) {
+      SC = SC + regWs[j] * outer(C[j,] - muC, C[j,] - muC)
+    }
+    # meanC = mean(C)
+    # for(j in 1:k) {
+    #   SC = SC + regWs[j] * outer(C[j,] - meanC, C[j,] - meanC)
+    # }
+  } else {
+    meanC = sum(C*IWs)/k
+    for(j in 1:k) {
+      SC = SC + regWs[j] * outer(C[j,] - meanC, C[j,] - meanC)
+    }
+  }
+  
+  SC = 1/(k-1) * SC
+  
+  # check if SC singular (e.g. if control variates are constant, as may 
+  # occur in blocked CV)
+  if(abs(det(SC)) < tol) {
+    warning("controlVarMat not full rank. Using 0 control vars...")
+    return(mean(IWs*scores))
+  }
+  
+  # empirical covariance matrix of Y and C
+  SYC = matrix(0, nrow=1, ncol=ncol(C))
+  if(!wtdMeanCentered) {
+    Ybar = sum(Ys*regWs)/k
+    for(j in 1:length(Ys)) {
+      SYC = SYC + regWs[j] * outer(Ys[j] - Ybar, C[j,] - muC)
+    }
+    # for(j in 1:length(Ys)) {
+    #   SYC = SYC + regWs[j] * outer(Ys[j] - Ybar, C[j,] - meanC)
+    # }
+  } else {
+    Ybar = sum(Ys*IWs)/k
+    for(j in 1:length(Ys)) {
+      SYC = SYC + regWs[j] * outer(Ys[j] - Ybar, C[j,] - meanC)
+    }
+  }
+  
+  SYC = matrix((1/(k-1)) * SYC, ncol=ncol(C))
+  
+  # estimate of betaVec
+  B = SYC %*% solve(SC)
+  # if(k == 50) {
+  #   browser()
+  # }
+  # calculate controlled IWCV
+  out = c(Ys - sweep(controlVarMat, 2, controlVarMeans, FUN="-") %*% c(B))
+  
+  if(printVarRatio) {
+    lambda = (k-2)/(k - 2 - q)
+    varControlEst = var(out)/k
+    varUncontrolEst = var(Ys)/k
+    varRatio = lambda * (varControlEst/varUncontrolEst)
+    print(paste0("controlled estimate resulted in variance ratio of ~", round(varRatio, 4), " for ", printRoot))
+  }
+  
+  if(!returnInfo) {
+    sum(out * regWs) / k 
+  } else {
+    # wis = IWs
+    # gisFirstPt = matrix(1 + t(c(controlVarMeans - tXhat)) %*% BhatXpt, nrow=1)
+    # gis = c(gisFirstPt %*% t(controlVarMat))
+    # eis = scores - (tYhat + sweep(controlVarMat, 2, controlVarMeans, "-") %*% Bhat)
+    # tYhatGREG = tYhat + sum(c(controlVarMeans - tXhat) * c(Bhat))
+    # list(tYhatGREG=tYhatGREG, tXhat=tXhat, tYhat=tYhat, wis=wis, gis=gis, eis=eis)
+    
+    eis = out
+    YhatRobust = sum(out * regWs) / k 
+    varHatYhat = var(eis * regWs/k)
+    list(YhatRobust=YhatRobust, varHatYhat=varHatYhat)
+  }
+}
+
+# Could be improved by accounting for known pop means, and using sandwich 
+# estimation in MSE estimation.
+# ws: importance/survey weights with expected value of 1 over the data distribution. 
+#     It is recommended to include ws in Zg
+getWeightedControlVarEst = function(Ys, Zf, muf, Zg=NULL, mug=NULL, ws=rep(1, length(Ys)), 
+                                    shrinkWeights=FALSE, includeIntercept=TRUE, 
+                                    pSeq=c(0, expit(seq(logit(.001), logit(.999), l=1000)), 1), 
+                                    estVar=TRUE, printPhat=TRUE) {
+  
+  n = length(Ys)
+  if(!is.matrix(Zf)) {
+    Zf = matrix(Zf, nrow=length(Ys))
+  }
+  if(!is.null(Zg) && !is.matrix(Zg)) {
+    Zg = matrix(Zg, nrow=length(Ys))
+  }
+  
+  # calculate original weighted estimate
+  thetaHatOrig = sum(Ys*ws)/n
+  
+  # calculate regularization parameter pHat
+  if(shrinkWeights) {
+    estMSE = function(thisP) {
+      out = getWeightedControlVarEst(Ys, Zf, muf, Zg, mug, ws^thisP, 
+                                     shrinkWeights=FALSE, includeIntercept, estVar=TRUE)
+      thisThetaHat = out[1]
+      thisVarHat = out[2]
+      (thisThetaHat - thetaHatOrig)^2 + thisVarHat
+    }
+    
+    mses = sapply(pSeq, estMSE)
+    minI = which.min(mses)
+    pHat = pSeq[minI]
+    
+    out = getWeightedControlVarEst(Ys, Zf, muf, Zg, mug, ws^pHat, 
+                                   shrinkWeights=FALSE, includeIntercept, estVar=TRUE)
+    out[2] = mses[minI]
+    
+    if(printPhat) {
+      print(paste0("pHatC: ", pHat))
+    }
+    
+    return(out)
+  }
+  
+  # concatenate effects, since they will all be estimated together anyway
+  Z = cbind(Zf, Zg)
+  mu = c(muf, mug)
+  
+  # fit weighted least squares model
+  # get estimated coefficients aside from intercept
+  if(includeIntercept) {
+    mod = lm(Ys~Z, weights=ws)
+    betaHats = coef(mod)[-1]
+    # Ztemp = cbind(1, Z)
+    # mutemp = c(1, mu)
+    # 
+    # if(!is.null(mug)) {
+    #   gInds = (1:length(mug)) + length(muf) + 1
+    # } else {
+    #   gInds = NULL
+    # }
+  } else {
+    mod = lm(Ys~Z-1, weights=ws)
+    betaHats = coef(mod)
+    # Ztemp = Z
+    # mutemp = mu
+    # if(!is.null(mug)) {
+    #   gInds = (1:length(mug)) + length(muf)
+    # } else {
+    #   gInds = NULL
+    # }
+  }
+  # betaHatsg = betaHats[-(1:length(muf))]
+  # betaHatsf = betaHats[1:length(muf)]
+  
+  # empirical covariance matrix of Z (here, muf might be known, but mug must be estimated)
+  # SZ = matrix(0, nrow=ncol(Ztemp), ncol=ncol(Ztemp))
+  # if(!wtdMeanCentered) {
+  #   if(!is.null(mug)) {
+  #     mugHatPop = colSums(sweep(Zg, 1, ws, "*")) * (1/n)
+  #     mutemp[gInds] = mugHatPop
+  #   }
+  #   
+  #   for(j in 1:k) {
+  #     SZ = SZ + ws[j] * outer(Ztemp[j,] - mutemp, Ztemp[j,] - mutemp)
+  #   }
+  #   
+  #   SZ = 1/(n-length(mug)) * SZ
+  # } else {
+  #   mutempHat = sum(Ztemp*ws)/n
+  #   for(j in 1:k) {
+  #     SZ = SZ + ws[j] * outer(Ztemp[j,] - mutempHat, Ztemp[j,] - mutempHat)
+  #   }
+  #   
+  #   if(includeIntercept) {
+  #     SZ = 1/(n-length(mutempHat)+1) * SZ # add one since the intercept mean is known
+  #   } else {
+  #     SZ = 1/(n-length(mutempHat)) * SZ
+  #   }
+  #   
+  # }
+  # 
+  # # empirical covariance matrix of Y and Ztemp
+  # SYZ = matrix(0, nrow=1, ncol=ncol(Ztemp))
+  # if(!wtdMeanCentered) {
+  #   Ybar = sum(Ys*regWs)/k
+  #   for(j in 1:length(Ys)) {
+  #     SYZ = SYZ + regWs[j] * outer(Ys[j] - Ybar, Ztemp[j,] - mutemp)
+  #   }
+  #   # for(j in 1:length(Ys)) {
+  #   #   SYZ = SYZ + regWs[j] * outer(Ys[j] - Ybar, Ztemp[j,] - meanC)
+  #   # }
+  # } else {
+  #   Ybar = sum(Ys*IWs)/k
+  #   for(j in 1:length(Ys)) {
+  #     SYZ = SYZ + regWs[j] * outer(Ys[j] - Ybar, Ztemp[j,] - mutempHat)
+  #   }
+  # }
+  # SYZ = matrix((1/(n-length(c(muf, mug)))) * SYZ, ncol=ncol(Ztemp))
+  # 
+  # # # estimate of betaVec
+  # B = SYZ %*% solve(SZ)
+  
+  # calculate mugHat and mufHat, expected values of Zg and Zf under population distribution
+  if(!is.null(Zf)) {
+    mufHat = apply(Zf, 2, weighted.mean, w=ws) * (sum(ws)/n)
+  } else {
+    mufHat = NULL
+  }
+  if(!is.null(Zg)) {
+    mugHat = colMeans(Zg)
+  } else {
+    mugHat = NULL
+  }
+  
+  muHat = c(mufHat, mugHat)
+  
+  # calculate final estimate
+  thetaHat = thetaHatOrig - (muHat - mu) %*% betaHats
+  
+  # calculate the MSE if need be based on V_1 of p. 459 of Lohr
+  if(estVar) {
+    eis = resid(mod)
+    if(!is.null(mug)) {
+      yHatgs = Zg %*% betaHats[-(1:length(mufHat))]
+      varEst = var(eis*ws + (ws - (1/n))*yHatgs)/n
+    } else {
+      varEst = var(eis*ws)/n
+    }
+    
+    c(thetaHat=thetaHat, thetaHatVar=varEst)
+  } else {
+    thetaHat
+  }
+}
+
+# p. 458 of Lohr Sampling
+getGREGCV = function(scores, IWs, controlVarMat=rep(1, length(scores)), controlVarMeans=1, 
+                     normalizeWeights=FALSE, returnInfo=FALSE, shrinkWeights=FALSE, 
+                     logitPSeq=seq(logit(.001), logit(.999), l=1000), type=1) {
+  k = length(scores)
+  
+  # if(shrinkWeights) {
+  #   out = getPGREG(LOOCVs=scores, IWs=IWs, controlVarMat=controlVarMat, controlVarMeans=controlVarMeans, 
+  #                  logitPSeq=logitPSeq, normalizeWeights=normalizeWeights, type=type)
+  #   IWs = IWs^out$p
+  # }
+  
+  if(normalizeWeights) {
+    IWs = IWs / sum(IWs)
+  }
+  
+  if(!is.matrix(controlVarMat)) {
+    controlVarMat = matrix(controlVarMat, ncol=1)
+  }
+  q = ncol(controlVarMat)
+  
+  # calculate Bhat, one part at a time
+  BhatXpt = matrix(0, ncol=q, nrow=q)
+  for(i in 1:k) {
+    Xi = matrix(controlVarMat[i,], ncol=1)
+    wi = IWs[i]
+    
+    BhatXpt = BhatXpt + wi * Xi %*% t(Xi)
+  }
+  BhatXpt = solve(BhatXpt)
+  
+  BhatXYpt = matrix(0, ncol=1, nrow=q)
+  for(i in 1:k) {
+    Xi = matrix(controlVarMat[i,], ncol=1)
+    wi = IWs[i]
+    Yi = scores[i]
+    
+    BhatXYpt = BhatXYpt + wi * Xi * Yi
+  }
+  
+  Bhat = BhatXpt %*% BhatXYpt
+  
+  # calculate Horvitz-Thompson estimates of X and Y
+  if(!normalizeWeights) {
+    tYhat = (1/k) * sum(IWs * scores)
+    tXhat = (1/k) * apply(controlVarMat, 2, function(x) {sum(x * IWs)})
+  } else {
+    tYhat = sum(IWs * scores)
+    tXhat = apply(controlVarMat, 2, function(x) {sum(x * IWs)})
+  }
+  
+  if(shrinkWeights) {
+    wis = IWs
+    gisFirstPt = matrix(1 + t(c(controlVarMeans - tXhat)) %*% BhatXpt, nrow=1)
+    gis = c(gisFirstPt %*% t(controlVarMat))
+    eis = scores - (tYhat + sweep(controlVarMat, 2, controlVarMeans, "-") %*% Bhat)
+    tYhatGREG = tYhat + sum(c(controlVarMeans - tXhat) * c(Bhat))
+    unbiasedEstimate = tYhat
+    
+    # browser()
+    out = getP(LOOCVs=scores, IWs=wis*gis, normalizeIWs=FALSE, unbiasedEstimate=unbiasedEstimate, 
+               logitPSeq=logitPSeq, resids=eis)
+  }
+  brow
+  # calculate GREG estimator for Y based on X
+  if(!returnInfo) {
+    tYhat + sum(c(controlVarMeans - tXhat) * c(Bhat))
+  } else {
+    wis = IWs
+    gisFirstPt = matrix(1 + t(c(controlVarMeans - tXhat)) %*% BhatXpt, nrow=1)
+    gis = c(gisFirstPt %*% t(controlVarMat))
+    eis = scores - (tYhat + sweep(controlVarMat, 2, controlVarMeans, "-") %*% Bhat)
+    YhatGREG = tYhat + sum(c(controlVarMeans - tXhat) * c(Bhat))
+    if(!normalizeWeights) {
+      varHatYhat = var(eis*wis/k)
+    } else {
+      varHatYhat = var(eis*wis)
+    }
+    list(YhatGREG=YhatGREG, varHatYhat=varHatYhat)
+  }
+}
+
+# DEPRECATED. Instead, use getP using the adjusted GREG weights (wis * gis) and 
+# with normalizeIWs=FALSE. You could also set unbiasedEstimate=YhatW
+getPGREG_old = function(LOOCVs, IWs, controlVarMat=IWs, controlVarMeans=1, 
+                    logitPSeq=seq(logit(.001), logit(.999), l=1000), 
+                    normalizeWeights=TRUE, type=1, test=TRUE) {
+  k = length(LOOCVs)
+  allPs = c(0, expit(logitPSeq), 1)
+  VarY = var(LOOCVs)
+  
+  YhatW = (1/sum(IWs)) * sum(LOOCVs * IWs)
+  
+  # commented out because it assumes the weights are fixed
+  # estMSE = function(p=NULL, logitP=NULL) {
+  #   if(is.null(p)) {
+  #     p = expit(logitP)
+  #   }
+  #   YhatP = (1/sum(IWs^p)) * sum(LOOCVs * IWs^p)
+  #   Bp2 = (YhatP - YhatW)^2
+  #   
+  #   Bp2 + VarY * (sum(IWs^(2*p))/sum(IWs^p)^2)
+  # }
+  
+  # accounts for randomness in the weights and correlation with LOOCVs
+  estMSE = function(p=NULL, logitP=NULL) {
+    if(is.null(p)) {
+      p = expit(logitP)
+    }
+    ws = IWs^p/sum(IWs^p)
+    
+    gregInfo = getGREGCV(LOOCVs, IWs, controlVarMat, controlVarMeans, normalizeWeights=TRUE, returnInfo=TRUE)
+    gis = gregInfo$gis
+    eis = gregInfo$eis
+    YhatP = gregInfo$tYhatGREG
+    
+    Bp2 = (YhatP - YhatW)^2
+    
+    if(type == 1) {
+      VarYhatP = var(eis * ws) * k
+    } else {
+      VarYhatP = var(eis * gis * ws) * k
+    }
+    
+    Bp2 + VarYhatP
+  }
+  
+  if(test) {
+    type=1
+    allMSEs1 = sapply(allPs, estMSE)
+    bestI1 = which.min(allMSEs1)
+    type=2
+    allMSEs2 = sapply(allPs, estMSE)
+    bestI2 = which.min(allMSEs2)
+    if(bestI1 != bestI2) {
+      browser()
+      allEsts = sapply(allPs, function(p) {
+        getGREGCV(LOOCVs, IWs^p, controlVarMat, controlVarMeans, normalizeWeights=TRUE, returnInfo=FALSE)
+      })
+    }
+    allMSEs = allMSEs1
+  } else {
+    allMSEs = sapply(allPs, estMSE)
+  }
+  
+  bestI = which.min(allMSEs)
+  pEst = allPs[bestI]
+  MSEp = allMSEs[bestI]
+  
+  # out = optim(0, estMSE)
+  # pEst = expit(out$par)
+  # 
+  # MSEp = estMSE(logit(pEst))
+  
+  list(p=pEst, MSEest=MSEp, allPs=allPs, allMSEs=allMSEs)
+}
+
+getRatioIWCV = function(scores, IWs=1, controlVarMat=IWs, controlVarMeans=NA, tol = 1e-08, 
+                         printVarRatio=FALSE, printRoot="") {
+  
+  
+  Ys = scores * IWs
+  Ybar = mean(Ys)
+  
+  if(!is.matrix(controlVarMat)) {
+    if(is.na(controlVarMeans)) {
+      controlVarMeans = mean(controlVarMat)
+    }
+    
+    Xbar = controlVarMeans
+    R = Ybar/Xbar
+    
+    
+  }
+}
+
+# normalizeIWs: if TRUE, calculates YhatW = (1/sum(IWs)) * sum(LOOCVs * IWs). 
+#               if FALSE, calculates YhatW = sum(LOOCVs * IWs).
+# resids: used for variance estimation for GREG estimators
+getP = function(LOOCVs, IWs, logitPSeq=seq(logit(.001), logit(.999), l=1000), normalizeIWs=TRUE, 
+                unbiasedEstimate=NULL, resids=LOOCVs) {
+  k = length(LOOCVs)
+  allPs = c(0, expit(logitPSeq), 1)
+  VarY = var(LOOCVs)
+  
+  if(is.null(unbiasedEstimate)) {
+    if(normalizeIWs) {
+      unbiasedEstimate = (1/sum(IWs)) * sum(LOOCVs * IWs)
+    } else {
+      unbiasedEstimate = sum(LOOCVs * IWs)
+    }
+  }
+  
+  # commented out because it assumes the weights are fixed
+  # YhatW = ifelse(normalizeIWs, (1/sum(IWs)) * sum(LOOCVs * IWs), sum(LOOCVs * IWs))
+  # estMSE = function(p=NULL, logitP=NULL) {
+  #   if(is.null(p)) {
+  #     p = expit(logitP)
+  #   }
+  #   YhatP = (1/sum(IWs^p)) * sum(LOOCVs * IWs^p)
+  #   Bp2 = (YhatP - YhatW)^2
+  # 
+  #   Bp2 + VarY * (sum(IWs^(2*p))/sum(IWs^p)^2)
+  # }
+  
+  # accounts for randomness in the weights and correlation with LOOCVs
+  estMSE = function(p=NULL, logitP=NULL) {
+    if(is.null(p)) {
+      p = expit(logitP)
+    }
+    
+    if(normalizeIWs) {
+      ws = IWs^p/sum(IWs^p)
+    } else {
+      ws = IWs^p
+    }
+    
+    YhatP = sum(LOOCVs * ws)
+    Bp2 = (YhatP - unbiasedEstimate)^2
+    
+    VarYp = var(resids * ws)
+    
+    Bp2 + VarYp * k
+  }
+  
+  allMSEs = sapply(allPs, estMSE)
+  bestI = which.min(allMSEs)
+  pEst = allPs[bestI]
+  MSEp = allMSEs[bestI]
+  
+  # out = optim(0, estMSE)
+  # pEst = expit(out$par)
+  # 
+  # MSEp = estMSE(logit(pEst))
+  
+  list(p=pEst, MSEest=MSEp, allPs=allPs, allMSEs=allMSEs)
+}
+
 # NOTE: SigmaAA can be a matrix with 1 column of the marginal variances if 
 #       getFullCov == FALSE, and is not necessary to include if 
 #       getCondVar == FALSE.
@@ -118,7 +655,7 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
                              rho=-.8, regenResults=TRUE, 
                              printProgress=FALSE, relTicks1=NULL, relTickLabs1=NULL, 
                              relTicks2=NULL, relTickLabs2=NULL, unif=FALSE, 
-                             preferential=FALSE, alpha=0, beta=1) {
+                             preferential=FALSE, alpha=0, beta=1, n2=n) {
   set.seed(seed)
   seeds = sample(1:100000, niter)
   
@@ -154,7 +691,7 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
       totTime = system.time(results <- lapply(1:niter, griddedResTestIter2Datasets, 
                                               rGRFargsTruth=rGRFargsTruth, 
                                               rGRFargsSample=rGRFargsSample, 
-                                              n1=n, n2=n, gridNs=gridNs, allSeeds=seeds, 
+                                              n1=n, n2=n2, gridNs=gridNs, allSeeds=seeds, 
                                               nx=nx, ny=ny, rho=rho, 
                                               sigmaEpsSq1=sigmaEpsSq, sigmaEpsSq2=sigmaEpsSq2, 
                                               alpha=alpha, beta=beta, 
@@ -165,19 +702,39 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
     results = list()
     for(i in 1:niter) {
       if(!twoDatasets) {
-        out = load(paste0("savedOutput/griddedCVtest/n", n, "_iter", i, unifText, prefText, twoDatText, ".RData"))
-        thisList = list(trueMSE=trueMSE, LOOCVs=LOOCVs, LOOCV=LOOCV, 
+        out = load(paste0("savedOutput/griddedCVtest/n1", n, "_n2", n2, "_iter", i, unifText, prefText, twoDatText, ".RData"))
+        thisList = list(trueMSE=trueMSE, wrongMSE=wrongMSE, LOOCVs=LOOCVs, LOOCV=LOOCV, 
                         griddedCVs=griddedCVs, gridNs=gridNs, iter=iter, 
                         rGRFargsTruth=rGRFargsTruth, rGRFargsSample=rGRFargsSample, rGRFargsWrong=rGRFargsWrong, 
                         n=n, nx=nx, ny=ny, sigmaEpsSq=sigmaEpsSq, allSeeds=allSeeds, 
                         alpha=alpha, beta=beta)
       } else {
-        out = load(paste0("savedOutput/griddedCVtest2Datasets/n1", n1, "_n2", n2, "_rho", rho, "_iter", iter, ".RData"))
-        thisList = list(trueMSE=trueMSE, LOOCVs=LOOCVs, LOOCV=LOOCV, 
-                        griddedCVs=griddedCVs, gridNs=gridNs, iter=iter, 
-                        rGRFargsTruth=rGRFargsTruth, rGRFargsSample=rGRFargsSample, rGRFargsWrong=rGRFargsWrong, 
-                        rho=rho, n1=n1, n2=n2, sigmaEpsSq1=sigmaEpsSq1, sigmaEpsSq2=sigmaEpsSq2, 
-                        alpha=alpha, beta=beta, nx=nx, ny=ny, allSeeds=allSeeds)
+        out = load(paste0("savedOutput/griddedCVtest2Datasets/n1", n, "_n2", n2, "_rho", rho, "_iter", i, ".RData"))
+        # thisList = list(trueMSE=trueMSE, wrongMSE=wrongMSE, LOOCVs=LOOCVs, LOOCV=LOOCV, 
+        #                 griddedCVs=griddedCVs, gridNs=gridNs, iter=iter, 
+        #                 rGRFargsTruth=rGRFargsTruth, rGRFargsSample=rGRFargsSample, rGRFargsWrong=rGRFargsWrong, 
+        #                 rho=rho, n1=n1, n2=n2, sigmaEpsSq1=sigmaEpsSq1, sigmaEpsSq2=sigmaEpsSq2, 
+        #                 alpha=alpha, beta=beta, nx=nx, ny=ny, allSeeds=allSeeds)\
+        thisList = list(trueMSE=trueMSE, wrongMSE=wrongMSE, LOOCVs=LOOCVs, LOOCVsWrong=LOOCVsWrong, 
+                        LOOCV=LOOCV, LOORCV=LOORCV, LOORCV=LOORCV, 
+                        LOOCVWrong=LOOCVWrong, LOOR2CVWrong=LOOR2CVWrong, LOOR2CVWrong=LOOR2CVWrong, 
+                        LOOISCV=LOOISCV, LOOISRCV=LOOISRCV, LOOISR2CV=LOOISR2CV, 
+                        LOOISPCV=LOOISPCV, LOOISPRCV=LOOISPRCV, LOOISPR2CV=LOOISPR2CV, 
+                        LOOISPCVWrong=LOOISPCVWrong, LOOISPRCVWrong=LOOISPRCVWrong, LOOISPR2CVWrong=LOOISPR2CVWrong, 
+                        LOOISCVWrong=LOOISCVWrong, LOOISRCVWrong=LOOISRCVWrong, LOOISR2CVWrong=LOOISR2CVWrong, 
+                        LOOVCCV=LOOVCCV, LOOVCRCV=LOOVCRCV, LOOVCR2CV=LOOVCR2CV, 
+                        LOOCVCCV=LOOCVCCV, LOOCVCRCV=LOOCVCRCV, LOOCVCR2CV=LOOCVCR2CV, 
+                        LOOVCCVWrong=LOOVCCVWrong, LOOVCRCVWrong=LOOVCRCVWrong, LOOVCR2CVWrong=LOOVCR2CVWrong, 
+                        LOOCVCCVWrong=LOOCVCCVWrong, LOOCVCRCVWrong=LOOCVCRCVWrong, LOOCVCR2CVWrong=LOOCVCR2CVWrong, 
+                        griddedCVs=griddedCVs, griddedRCVs=griddedRCVs, griddedR2CVs=griddedR2CVs, 
+                        griddedCVsWrong=griddedCVsWrong, griddedRCVsWrong=griddedRCVsWrong, griddedR2CVsWrong=griddedR2CVsWrong, 
+                        gridNs=gridNs, iter=iter, rGRFargsTruth=rGRFargsTruth, 
+                        rGRFargsSample=rGRFargsSample, rGRFargsWrong=rGRFargsWrong, 
+                        n1=n1, n2=n2, nx=nx, ny=ny, rho=rho, sigmaEpsSq1=sigmaEpsSq1, 
+                        sigmaEpsSq2=sigmaEpsSq2, allSeeds=allSeeds, 
+                        meanIW1=meanIW1, meanIW2=meanIW2, meanCVCIW1=meanCVCIW1, meanCVCIW2=meanCVCIW2, 
+                        cors1IS=cors1IS, cors2IS=cors2IS, cors1CVC=cors1CVC, cors2CVC=cors2CVC, 
+                        trueVarW1=trueVarW1, trueVarW2=trueVarW2)
       }
       
       results = c(results, list(thisList))
@@ -193,67 +750,177 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
   #      iter=iter, seed=seed, rGRFargsTruth=rGRFargsTruth, 
   #      rGRFargsSample=rGRFargsSample, 
   #      n=n, nx=nx, ny=ny, sigmaEpsSq=sigmaEpsSq, seed=seed)
+  
+  trueVarW1s = sapply(results, getName, thisName="trueVarW1")
+  trueVarW2s = sapply(results, getName, thisName="trueVarW2")
+  meanIW1s = sapply(results, getName, thisName="meanIW1")
+  meanIW2s = sapply(results, getName, thisName="meanIW2")
+  meanCVCIW1s = sapply(results, getName, thisName="meanCVCIW1")
+  meanCVCIW2s = sapply(results, getName, thisName="meanCVCIW2")
+  
+  cors1IS = sapply(results, getName, thisName="cors1IS")
+  cors2IS = sapply(results, getName, thisName="cors2IS")
+  cors1CVC = sapply(results, getName, thisName="cors1CVC")
+  cors2CVC = sapply(results, getName, thisName="cors2CVC")
+  
   trueMSEs = sapply(results, getName, thisName="trueMSE")
+  wrongMSEs = sapply(results, getName, thisName="wrongMSE")
   LOOCVs = sapply(results, getName, thisName="LOOCV")
   LOOISCVs = sapply(results, getName, thisName="LOOISCV")
   LOOVCCVs = sapply(results, getName, thisName="LOOVCCV")
+  LOOCVCCVs = sapply(results, getName, thisName="LOOCVCCV")
   griddedCVs = sapply(results, getName, thisName="griddedCVs")
   
   LOOCVsWrong = sapply(results, getName, thisName="LOOCVWrong")
   LOOISCVsWrong = sapply(results, getName, thisName="LOOISCVWrong")
   LOOVCCVsWrong = sapply(results, getName, thisName="LOOVCCVWrong")
+  LOOCVCCVsWrong = sapply(results, getName, thisName="LOOCVCCVWrong")
   griddedCVsWrong = sapply(results, getName, thisName="griddedCVsWrong")
+  
+  LOORCVs = sapply(results, getName, thisName="LOORCV")
+  LOOISRCVs = sapply(results, getName, thisName="LOOISRCV")
+  LOOVCRCVs = sapply(results, getName, thisName="LOOVCRCV")
+  LOOCVCRCVs = sapply(results, getName, thisName="LOOCVCRCV")
+  griddedRCVs = sapply(results, getName, thisName="griddedRCVs")
+  LOOISRCVsWrong = sapply(results, getName, thisName="LOOISRCVWrong")
+  LOOVCRCVsWrong = sapply(results, getName, thisName="LOOVCRCVWrong")
+  LOOCVCRCVsWrong = sapply(results, getName, thisName="LOOCVCRCVWrong")
+  griddedRCVsWrong = sapply(results, getName, thisName="griddedRCVsWrong")
+  
+  LOOR2CVs = sapply(results, getName, thisName="LOOR2CV")
+  LOOISR2CVs = sapply(results, getName, thisName="LOOISR2CV")
+  LOOVCR2CVs = sapply(results, getName, thisName="LOOVCR2CV")
+  LOOCVCR2CVs = sapply(results, getName, thisName="LOOCVCR2CV")
+  griddedR2CVs = sapply(results, getName, thisName="griddedR2CVs")
+  LOOISR2CVsWrong = sapply(results, getName, thisName="LOOISR2CVWrong")
+  LOOVCR2CVsWrong = sapply(results, getName, thisName="LOOVCR2CVWrong")
+  LOOCVCR2CVsWrong = sapply(results, getName, thisName="LOOCVCR2CVWrong")
+  griddedR2CVsWrong = sapply(results, getName, thisName="griddedR2CVsWrong")
+  
+  LOOISPCVs = sapply(results, getName, thisName="LOOISPCV")
+  LOOISPRCVs = sapply(results, getName, thisName="LOOISPRCV")
+  LOOISPR2CVs = sapply(results, getName, thisName="LOOISPR2CV")
+  LOOISPCVsWrong = sapply(results, getName, thisName="LOOISPCVWrong")
+  LOOISPRCVsWrong = sapply(results, getName, thisName="LOOISPRCVWrong")
+  LOOISPR2CVsWrong = sapply(results, getName, thisName="LOOISPR2CVWrong")
   
   # calculate error
   LOOCVerrs = LOOCVs - trueMSEs
   LOOISCVerrs = LOOISCVs - trueMSEs
   LOOVCCVerrs = LOOVCCVs - trueMSEs
+  LOOCVCCVerrs = LOOCVCCVs - trueMSEs
   griddedCVerrs = sweep(griddedCVs, 2, trueMSEs)
   griddedCVmeanErr = rowMeans(griddedCVerrs)
+  LOOISRCVerrs = LOOISRCVs - trueMSEs
+  LOOVCRCVerrs = LOOVCRCVs - trueMSEs
+  LOOCVCRCVerrs = LOOCVCRCVs - trueMSEs
+  griddedRCVerrs = sweep(griddedRCVs, 2, trueMSEs)
+  LOOISR2CVerrs = LOOISR2CVs - trueMSEs
+  LOOVCR2CVerrs = LOOVCR2CVs - trueMSEs
+  LOOCVCR2CVerrs = LOOCVCR2CVs - trueMSEs
+  griddedR2CVerrs = sweep(griddedR2CVs, 2, trueMSEs)
+  
+  LOOISPCVerrs = LOOISPCVs - trueMSEs
+  LOOISPRCVerrs = LOOISPRCVs - trueMSEs
+  LOOISPR2CVerrs = LOOISPR2CVs - trueMSEs
   
   # calculate percent error
   LOOCVpctErrs = 100 * LOOCVerrs/trueMSEs
   LOOISCVpctErrs = 100 * LOOISCVerrs/trueMSEs
   LOOVCCVpctErrs = 100 * LOOVCCVerrs/trueMSEs
+  LOOCVCCVpctErrs = 100 * LOOCVCCVerrs/trueMSEs
   griddedCVpctErrs = sweep(griddedCVerrs, 2, 100/trueMSEs, "*")
   griddedCVmeanPctErr = rowMeans(griddedCVpctErrs)
+  LOOISRCVpctErrs = 100 * LOOISRCVerrs/trueMSEs
+  LOOCVCRCVpctErrs = 100 * LOOCVCRCVerrs/trueMSEs
+  griddedRCVpctErrs = sweep(griddedRCVerrs, 2, 100/trueMSEs, "*")
+  LOOISR2CVpctErrs = 100 * LOOISR2CVerrs/trueMSEs
+  LOOCVCR2CVpctErrs = 100 * LOOCVCR2CVerrs/trueMSEs
+  griddedR2CVpctErrs = sweep(griddedR2CVerrs, 2, 100/trueMSEs, "*")
   
   # calculate relative error
   LOOCVrelErrs = LOOCVs/trueMSEs
   LOOISCVrelErrs = LOOISCVs/trueMSEs
   LOOVCCVrelErrs = LOOVCCVs/trueMSEs
+  LOOCVCCVrelErrs = LOOCVCCVs/trueMSEs
   griddedCVrelErrs = sweep(griddedCVs, 2, trueMSEs, "/")
   griddedCVmeanRelErr = rowMeans(griddedCVrelErrs)
+  LOOISRCVrelErrs = LOOISRCVs/trueMSEs
+  LOOCVCRCVrelErrs = LOOCVCRCVs/trueMSEs
+  griddedRCVrelErrs = sweep(griddedRCVs, 2, trueMSEs, "/")
+  LOOISR2CVrelErrs = LOOISR2CVs/trueMSEs
+  LOOCVCR2CVrelErrs = LOOCVCR2CVs/trueMSEs
+  griddedR2CVrelErrs = sweep(griddedR2CVs, 2, trueMSEs, "/")
   
   # calculate proportion of time correct model is selected
   LOOCVprop = mean(LOOCVs < LOOCVsWrong)
   LOOISCVprop = mean(LOOISCVs < LOOISCVsWrong)
   LOOVCCVprop = mean(LOOVCCVs < LOOVCCVsWrong)
+  LOOCVCCVprop = mean(LOOCVCCVs < LOOCVCCVsWrong)
   griddedCVprop = rowMeans(griddedCVs < griddedCVsWrong)
+  LOOISRCVprop = mean(LOOISRCVs < LOOISRCVsWrong)
+  LOOCVCRCVprop = mean(LOOCVCRCVs < LOOCVCRCVsWrong)
+  griddedRCVprop = rowMeans(griddedRCVs < griddedRCVsWrong)
+  LOOISR2CVprop = mean(LOOISR2CVs < LOOISR2CVsWrong)
+  LOOCVCR2CVprop = mean(LOOCVCR2CVs < LOOCVCR2CVsWrong)
+  griddedR2CVprop = rowMeans(griddedR2CVs < griddedR2CVsWrong)
+  LOOISPCVprop = mean(LOOISPCVs < LOOISPCVsWrong)
+  LOOISPRCVprop = mean(LOOISPRCVs < LOOISPRCVsWrong)
+  LOOISPR2CVprop = mean(LOOISPR2CVs < LOOISPR2CVsWrong)
   
   LOOCVpropMOE = qnorm(.975) * sqrt(LOOCVprop*(1-LOOCVprop) / niter)
   LOOISCVpropMOE = qnorm(.975) * sqrt(LOOISCVprop*(1-LOOISCVprop) / niter)
   LOOVCCVpropMOE = qnorm(.975) * sqrt(LOOVCCVprop*(1-LOOVCCVprop) / niter)
+  LOOCVCCVpropMOE = qnorm(.975) * sqrt(LOOCVCCVprop*(1-LOOCVCCVprop) / niter)
   griddedCVpropMOE = qnorm(.975) * sqrt(griddedCVprop*(1-griddedCVprop) / niter)
+  LOOISRCVpropMOE = qnorm(.975) * sqrt(LOOISRCVprop*(1-LOOISRCVprop) / niter)
+  LOOCVCRCVpropMOE = qnorm(.975) * sqrt(LOOCVCRCVprop*(1-LOOCVCRCVprop) / niter)
+  griddedRCVpropMOE = qnorm(.975) * sqrt(griddedRCVprop*(1-griddedRCVprop) / niter)
+  LOOISR2CVpropMOE = qnorm(.975) * sqrt(LOOISR2CVprop*(1-LOOISR2CVprop) / niter)
+  LOOCVCR2CVpropMOE = qnorm(.975) * sqrt(LOOCVCR2CVprop*(1-LOOCVCR2CVprop) / niter)
+  griddedR2CVpropMOE = qnorm(.975) * sqrt(griddedR2CVprop*(1-griddedR2CVprop) / niter)
+  LOOISPCVpropMOE = qnorm(.975) * sqrt(LOOISPCVprop*(1-LOOISPCVprop) / niter)
+  LOOISPRCVpropMOE = qnorm(.975) * sqrt(LOOISPRCVprop*(1-LOOISPRCVprop) / niter)
+  LOOISPR2CVpropMOE = qnorm(.975) * sqrt(LOOISPR2CVprop*(1-LOOISPR2CVprop) / niter)
   
   LOOCVpropHigh = LOOCVprop + LOOCVpropMOE
   LOOISCVpropHigh = LOOISCVprop + LOOISCVpropMOE
   LOOVCCVpropHigh = LOOVCCVprop + LOOVCCVpropMOE
+  LOOCVCCVpropHigh = LOOCVCCVprop + LOOCVCCVpropMOE
   griddedCVpropHigh = griddedCVprop + griddedCVpropMOE
+  LOOISRCVpropHigh = LOOISRCVprop + LOOISRCVpropMOE
+  LOOCVCRCVpropHigh = LOOCVCRCVprop + LOOCVCRCVpropMOE
+  griddedRCVpropHigh = griddedRCVprop + griddedRCVpropMOE
+  LOOISR2CVpropHigh = LOOISR2CVprop + LOOISR2CVpropMOE
+  LOOCVCR2CVpropHigh = LOOCVCR2CVprop + LOOCVCR2CVpropMOE
+  griddedR2CVpropHigh = griddedR2CVprop + griddedR2CVpropMOE
+  LOOISPCVpropHigh = LOOISPCVprop + LOOISPCVpropMOE
+  LOOISCVpropHigh = LOOISCVprop + LOOISCVpropMOE
+  LOOISR2CVpropHigh = LOOISR2CVprop + LOOISR2CVpropMOE
   
   LOOCVpropLow = LOOCVprop - LOOCVpropMOE
   LOOISCVpropLow = LOOISCVprop - LOOISCVpropMOE
   LOOVCCVpropLow = LOOVCCVprop - LOOVCCVpropMOE
+  LOOCVCCVpropLow = LOOCVCCVprop - LOOCVCCVpropMOE
   griddedCVpropLow = griddedCVprop - griddedCVpropMOE
+  LOOISRCVpropLow = LOOISRCVprop - LOOISRCVpropMOE
+  LOOCVCRCVpropLow = LOOCVCRCVprop - LOOCVCRCVpropMOE
+  griddedRCVpropLow = griddedRCVprop - griddedRCVpropMOE
+  LOOISR2CVpropLow = LOOISR2CVprop - LOOISR2CVpropMOE
+  LOOCVCR2CVpropLow = LOOCVCR2CVprop - LOOCVCR2CVpropMOE
+  griddedR2CVpropLow = griddedR2CVprop - griddedR2CVpropMOE
+  LOOISPCVpropLow = LOOISPCVprop - LOOISPCVpropMOE
+  LOOISCVpropLow = LOOISCVprop - LOOISCVpropMOE
+  # LOOISR2CVpropLow = LOOISR2CVprop - LOOISRR2CVpropMOE
   
   figureFolder = ifelse(twoDatasets, "figures/twoDatasetsTest/", "figures/gridTest/")
   
   # plot results ----
   # proportion of time selecting right model
-  pdf(paste0(figureFolder, "selectProb_n", n, unifText, prefText, twoDatText, "_niter", niter, ".pdf"), width=6, height=6)
-  ylim = range(c(LOOCVpropHigh, LOOISCVpropHigh, LOOVCCVpropHigh, griddedCVpropHigh, 
-                 LOOCVpropLow, LOOISCVpropLow, LOOVCCVpropLow, griddedCVpropLow))
-  plot(gridNs, griddedCVprops, type="n", log="x", axes=FALSE, 
+  pdf(paste0(figureFolder, "selectProb_n1", n, "_n2", n2, unifText, prefText, twoDatText, "_niter", niter, ".pdf"), width=6, height=6)
+  ylim = range(c(LOOCVpropHigh, LOOISCVpropHigh, LOOISRCVpropHigh, LOOVCCVpropHigh, LOOCVCCVpropHigh, LOOCVCRCVpropHigh, griddedCVpropHigh, 
+                 LOOCVpropLow, LOOISCVpropLow, LOOISRCVpropLow, LOOVCCVpropLow, LOOCVCCVpropLow, LOOCVCRCVpropLow, griddedCVpropLow))
+  plot(gridNs, griddedCVprop, type="n", log="x", axes=FALSE, 
        ylim=ylim, xlab="Blocks per side", 
        ylab="Probability", main=paste0("Gridded CV vs resolution (n=", n, unifTitleText, prefTitleText, twoDatTitleText, ")"))
   axis(side=1, at=gridNs)
@@ -265,19 +932,31 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
   abline(h=LOOCVprop, lty=1, col="purple")
   abline(h=LOOCVpropHigh, lty=2, col="purple")
   abline(h=LOOCVpropLow, lty=2, col="purple")
+  LOORcol = do.call("rgb", as.list(c(col2rgb("purple"))/255 * .8))
+  # abline(h=LOORCVprop, lty=1, col="purple")
+  # abline(h=LOORCVpropHigh, lty=2, col="purple")
+  # abline(h=LOORCVpropLow, lty=2, col="purple")
   abline(h=LOOISCVprop, lty=1, col="orange")
   abline(h=LOOISCVpropHigh, lty=2, col="orange")
   abline(h=LOOISCVpropLow, lty=2, col="orange")
+  LOOISRcol = do.call("rgb", as.list(c(col2rgb("orange"))/255 * .8))
+  abline(h=LOOISPCVprop, lty=1, col=LOOISRcol)
+  abline(h=LOOISPCVpropHigh, lty=2, col=LOOISRcol)
+  abline(h=LOOISPCVpropLow, lty=2, col=LOOISRcol)
   abline(h=LOOVCCVprop, lty=1, col="brown")
   abline(h=LOOVCCVpropHigh, lty=2, col="brown")
   abline(h=LOOVCCVpropLow, lty=2, col="brown")
+  LOOCVCRcol = do.call("rgb", as.list(c(col2rgb("brown"))/255 * .8))
+  abline(h=LOOCVCCVprop, lty=1, col=LOOCVCRcol)
+  abline(h=LOOCVCCVpropHigh, lty=2, col=LOOCVCRcol)
+  abline(h=LOOCVCCVpropLow, lty=2, col=LOOCVCRcol)
   abline(h=0, lty=2, col="green")
-  legend("topright", c("Gridded", "LOO", "LOOVC", "LOOIS", "Truth"), col=c("blue", "purple", "brown", "orange", "green"), 
-         pch=c(19, NA, NA, NA, NA), lty=1)
+  legend("topright", c("Gridded", "LOO", "LOOVC", "LOOCVC", "LOOIS", "LOOISP", "Truth"), col=c("blue", "purple", "brown", LOOCVCRcol, "orange", LOOISRcol, "green"), 
+         pch=c(19, NA, NA, NA, NA, NA, NA), lty=1)
   dev.off()
   
-  # absolute bias
-  pdf(paste0(figureFolder, "griddedBias_n", n, unifText, prefText, twoDatText, "_niter", niter, ".pdf"), width=6, height=6)
+  # bias
+  pdf(paste0(figureFolder, "griddedBias_n1", n, "_n2", n2, unifText, prefText, twoDatText, "_niter", niter, ".pdf"), width=6, height=6)
   plot(gridNs, griddedCVmeanErr, type="n", log="x", axes=FALSE, 
        ylim=c(min(c(griddedCVmeanErr, mean(LOOCVerrs))), max(griddedCVmeanErr)), 
        xlab="Blocks per side", 
@@ -287,14 +966,18 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
   box()
   lines(gridNs, griddedCVmeanErr, type="o", pch=19, col="blue")
   abline(h=mean(LOOCVerrs), lty=2, col="purple")
+  abline(h=mean(LOORCVs), lty=2, col=LOORcol)
   abline(h=mean(LOOISCVerrs), lty=2, col="orange")
+  abline(h=mean(LOOISPCVerrs), lty=2, col=LOOISRcol)
   abline(h=mean(LOOVCCVerrs), lty=2, col="brown")
+  abline(h=mean(LOOCVCCVerrs), lty=2, col=LOOCVCRcol)
   abline(h=0, lty=2, col="green")
-  legend("topright", c("Gridded", "LOO", "LOOVC", "LOOIS", "Truth"), col=c("blue", "purple", "brown", "orange", "green"), 
-         pch=c(19, NA, NA, NA, NA), lty=c(1, 2, 2, 2, 2))
+  legend("topright", c("Gridded", "LOO", "LOOR", "LOOVC", "LOOCVC", "LOOIS", "LOOISP", "Truth"), 
+         col=c("blue", "purple", LOORcol, "brown", LOOCVCRcol, "orange", LOOISRcol, "green"), 
+         pch=c(19, NA, NA, NA, NA, NA, NA, NA), lty=c(1, 2, 2, 2, 2, 2, 2, 2))
   dev.off()
   
-  pdf(paste0(figureFolder, "griddedBiasExtrap_n", n, unifText, prefText, twoDatText, "_niter", niter, ".pdf"), width=6, height=6)
+  pdf(paste0(figureFolder, "griddedBiasExtrap_n1", n, "_n2", n2, unifText, prefText, twoDatText, "_niter", niter, ".pdf"), width=6, height=6)
   plot(gridNs, griddedCVmeanErr, type="n", log="x", axes=FALSE, 
        ylim=c(min(c(griddedCVmeanErr, mean(LOOCVerrs))), 1+sigmaEpsSq-mean(trueMSEs)), 
        xlab="Blocks per side", 
@@ -314,7 +997,7 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
   dev.off()
   
   # then relative/percent bias
-  pdf(paste0(figureFolder, "griddedPctBias_n", n, unifText, prefText, twoDatText, "_niter", niter, ".pdf"), width=6, height=6)
+  pdf(paste0(figureFolder, "griddedPctBias_n1", n, "_n2", n2, unifText, prefText, twoDatText, "_niter", niter, ".pdf"), width=6, height=6)
   plot(gridNs, griddedCVmeanPctErr, type="n", log="x", axes=FALSE, 
        ylim=c(min(c(griddedCVmeanPctErr, mean(LOOCVpctErrs))), max(griddedCVmeanPctErr)), 
        xlab="Blocks per side", 
@@ -331,7 +1014,7 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
          pch=c(19, NA, NA, NA, NA), lty=c(1, 2, 2, 2, 2))
   dev.off()
   
-  pdf(paste0(figureFolder, "griddedPctBiasExtrap_n", n, unifText, prefText, twoDatText, "_niter", niter, ".pdf"), width=6, height=6)
+  pdf(paste0(figureFolder, "griddedPctBiasExtrap_n1", n, "_n2", n2, unifText, prefText, twoDatText, "_niter", niter, ".pdf"), width=6, height=6)
   plot(gridNs, griddedCVmeanPctErr, type="n", log="x", axes=FALSE, 
        ylim=c(min(c(griddedCVmeanPctErr, mean(LOOCVpctErrs))), 100*mean((1+sigmaEpsSq-trueMSEs)/trueMSEs)), 
        xlab="Blocks per side", 
@@ -356,8 +1039,8 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
       if(!unif && !twoDatasets) {
         relTicks1 = c(.67, 1, 1.5, 2, 2.5, 3)
         relTickLabs1 = c("0.67", "1", "1.5", "2", "2.5", "3")
-        relTicks2 = c(.67, 1, 2, 3, 5)
-        relTickLabs2 = c("0.67", "1", "2", "3", "5")
+        relTicks2 = c(.67, .75, .9, 1, 1.1, 1.25, 1.5, 2, 3, 5)
+        relTickLabs2 = c("0.67", "0.75", "0.9", "1", "1.1", "1.25", "1.5", "2", "3", "5")
       } else if(!twoDatasets) {
         relTicks1 = c(.67, 1, 2, 3, 4)
         relTickLabs1 = c("0.67", "1", "2", "3", "4")
@@ -367,13 +1050,18 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
         if(rho == -.8) {
           relTicks1 = seq(.7, 1.5, by=.1)
           relTickLabs1 = as.character(relTicks1)
-          relTicks2 = c(.67, 1, 2, 3, 5)
-          relTickLabs2 = c("0.67", "1", "2", "3", "5")
+          relTicks2 = c(.67, .75, .9, 1, 1.1, 1.25, 1.5, 2, 3, 5)
+          relTickLabs2 = c("0.67", "0.75", "0.9", "1", "1.1", "1.25", "1.5", "2", "3", "5")
         } else if(rho == 0) {
           relTicks1 = seq(.7, 3, by=.1)
           relTickLabs1 = as.character(relTicks1)
           relTicks2 = c(.67, 1, 2, 3, 5)
           relTickLabs2 = c("0.67", "1", "2", "3", "5")
+        } else if(rho == .8) {
+          relTicks1 = seq(.7, 1.5, by=.1)
+          relTickLabs1 = as.character(relTicks1)
+          relTicks2 = c(.67, .75, .9, 1, 1.1, 1.25, 1.5, 2, 3, 5)
+          relTickLabs2 = c("0.67", "0.75", "0.9", "1", "1.1", "1.25", "1.5", "2", "3", "5")
         }
         
       }
@@ -382,11 +1070,11 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
         relTicks = c(.6, 1, 2, 5, 10, 20, 50, 100)
         relTickLabs = c("0.6", "1", "2", "5", "10", "20", "50", "100")
         relTicks1 = relTicks2 = relTicks
-        relTicksLab1 = relTickLabs2 = relTickLabs
+        relTickLabs1 = relTickLabs2 = relTickLabs
       } else if(!twoDatasets) {
         browser()
       } else {
-        relTicks1 = seq(.7, 3, by=.1)
+        relTicks1 = c(.8, .9, 1, 1.1, 1.2, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5)
         relTickLabs1 = as.character(relTicks1)
         relTicks2 = c(.67, 1, 2, 3, 5, 10, 20, 30, 40, 50, 60)
         relTickLabs2 = c("0.67", "1", "2", "3", "5", "10", "20", "30", "40", "50", "60")
@@ -395,13 +1083,13 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
       relTicks = c(.67, 1, 2, 5, 10, 20, 50, 100)
       relTickLabs = c("0.67", "1", "2", "5", "10", "20", "50", "100")
       relTicks1 = relTicks2 = relTicks
-      relTicksLab1 = relTickLabs2 = relTickLabs
+      relTickLabs1 = relTickLabs2 = relTickLabs
     }
   }
   
-  browser()
+  # browser()
   
-  pdf(paste0(figureFolder, "griddedRelBias_n", n, unifText, prefText, twoDatText, "_niter", niter, ".pdf"), width=6, height=6)
+  pdf(paste0(figureFolder, "griddedRelBias_n1", n, "_n2", n2, unifText, prefText, twoDatText, "_niter", niter, ".pdf"), width=6, height=6)
   ylim = c(min(c(griddedCVmeanRelErr, mean(LOOCVrelErrs))), max(griddedCVmeanRelErr))
   plot(gridNs, griddedCVmeanRelErr, type="n", log="xy", axes=FALSE, 
        ylim=ylim, 
@@ -421,7 +1109,7 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
          pch=c(19, NA, NA, NA, NA), lty=c(1, 2, 2, 2, 2))
   dev.off()
   
-  pdf(paste0(figureFolder, "griddedRelBiasExtrap_n", n, unifText, prefText, twoDatText, "_niter", niter, ".pdf"), width=6, height=6)
+  pdf(paste0(figureFolder, "griddedRelBiasExtrap_n1", n, "_n2", n2, unifText, prefText, twoDatText, "_niter", niter, ".pdf"), width=6, height=6)
   plot(gridNs, griddedCVmeanRelErr, type="n", log="xy", axes=FALSE, 
        ylim=c(min(c(griddedCVmeanRelErr, mean(LOOCVrelErrs))), mean((1+sigmaEpsSq)/trueMSEs)), 
        xlab="Blocks per side", 
@@ -440,28 +1128,126 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
          pch=c(19, NA, NA, NA, NA, NA), lty=c(1, 2, 2, 2, 2, 2))
   dev.off()
   
-  # boxplots ----
-  pdf(paste0(figureFolder, "CVMSE_n", n, unifText, prefText, twoDatText, "_niter", niter, ".pdf"), width=6, height=6)
+  # Overall MSE ----
+  methods = c("LOO", 
+              "LOO-IW", "LOO-IWR", "LOO-IWR2", 
+              "LOO-IWP", "LOO-IWRP", "LOO-IWRP2", 
+              "LOO-VC", "LOO-VCR", "LOO-VCR2"
+              # "LOO-VCP"
+              # "LOO-CVC", "LOO-CVCP", "LOO-CVCR", "LOO-CVCR2"
+  )
+  # methods = methods[-c(match(c("LOO-VCP"), methods))]
+  pdf(paste0(figureFolder, "CVMSE_n1", n, "_n2", n2, unifText, prefText, twoDatText, "_niter", niter, ".pdf"), width=8, height=6)
   dat = data.frame(
-    Method=rep(c("LOO", "LOO-IS", "LOO-VC"), each=n), 
-    sqResids=c((LOOCVs - trueMSEs)^2, 
-               (LOOISCVs - trueMSEs)^2, 
-               (LOOVCCVs - trueMSEs)^2))
-  boxplot(sqResids~Method, data=dat, log="y", col="skyblue", ylab="Estimator Sq. Err.")
+    Method=factor(rep(methods, each=niter), 
+                  levels=methods, ordered=FALSE), 
+    MSE=c((LOOCVs - trueMSEs)^2, 
+          (LOOISCVs - trueMSEs)^2, 
+          (LOOISRCVs - trueMSEs)^2, 
+          (LOOISR2CVs - trueMSEs)^2, 
+          (LOOISPCVs - trueMSEs)^2, 
+          (LOOISPRCVs - trueMSEs)^2, 
+          (LOOISPR2CVs - trueMSEs)^2, 
+          (LOOVCCVs - trueMSEs)^2, 
+          (LOOVCRCVs - trueMSEs)^2, 
+          (LOOVCR2CVs - trueMSEs)^2
+          # (LOOVCPCVs - trueMSEs)^2, 
+          # (LOOCVCCVs - trueMSEs)^2, 
+          # (LOOCVCPCVs - trueMSEs)^2,
+          # (LOOCVCRCVs - trueMSEs)^2, 
+          # (LOOCVCR2CVs - trueMSEs)^2)
+    ))
+  boxplot(MSE~Method, data=dat, col="skyblue", log="y", ylab="Estimator Sq. Err.")
   dev.off()
   
-  pdf(paste0(figureFolder, "CVMRE_n", n, unifText, prefText, twoDatText, "_niter", niter, ".pdf"), width=6, height=6)
+  pdf(paste0(figureFolder, "CVMSEerr_n1", n, "_n2", n2, unifText, prefText, twoDatText, "_niter", niter, ".pdf"), width=8, height=6)
+  datac <- summarySEwithin(dat, measurevar="MSE", withinvars=c("Method"))
+  #>    Shape   ColorScheme  N     Time Time_norm       sd        se        ci
+  #> 1  Round       Colored 12 43.58333  43.58333 1.212311 0.3499639 0.7702654
+  #> 2  Round Monochromatic 12 44.58333  44.58333 1.331438 0.3843531 0.8459554
+  #> 3 Square       Colored 12 42.58333  42.58333 1.461630 0.4219364 0.9286757
+  #> 4 Square Monochromatic 12 43.58333  43.58333 1.261312 0.3641095 0.8013997
+  ggplot(datac, aes(x=Method, y=MSE)) +
+    geom_bar(position=position_dodge(.9), colour="black", stat="identity") +
+    geom_errorbar(position=position_dodge(.9), width=.25, aes(ymin=MSE-ci, ymax=MSE+ci)) +
+    # coord_cartesian(ylim=c(40,46)) +
+    # scale_fill_manual(values=c("#CCCCCC","#FFFFFF")) +
+    # scale_y_continuous(breaks=seq(1:100)) +
+    theme_bw()
+    # geom_hline(yintercept=38)
+  dev.off()
+  
+  pdf(paste0(figureFolder, "CVMRE_n1", n, "_n2", n2, unifText, prefText, twoDatText, "_niter", niter, ".pdf"), width=6, height=6)
   dat = data.frame(
-    Method=rep(c("LOO", "LOO-IS", "LOO-VC"), each=n), 
+    Method=rep(c("LOO", "LOO-IW", "LOO-VC", "LOO-ISR", "LOO-CVCR"), each=n), 
     sqResids=c(LOOCVs/trueMSEs, 
                LOOISCVs/trueMSEs, 
-               LOOVCCVs/trueMSEs))
+               LOOVCCVs/trueMSEs, 
+               LOOISRCVs/trueMSEs, 
+               LOOCVCRCVs/trueMSEs))
   boxplot(sqResids~Method, data=dat, log="y", col="skyblue", ylab="Estimator Rel. Err.")
   dev.off()
   
+  pdf(paste0(figureFolder, "CVMSE_n1", n, "_n2", n2, unifText, prefText, twoDatText, "_niter", niter, ".pdf"), width=8, height=6)
+  dat = data.frame(
+    Method=factor(rep(c("LOO", "LOO-IW", "LOO-IWP", "LOO-IWPR2", "LOO-VC", "LOO-VCR", "LOO-VCR2", "LOO-CVC", "LOO-CVCR", "LOO-CVCR2"), each=niter), 
+                  levels=c("LOO", "LOO-IW", "LOO-IWP", "LOO-IWPR2", "LOO-VC", "LOO-VCR", "LOO-VCR2", "LOO-CVC", "LOO-CVCR", "LOO-CVCR2"), ordered=FALSE), 
+    MSE=c((LOOCVs - trueMSEs)^2, 
+          (LOOISCVs - trueMSEs)^2, 
+          (LOOISPCVs - trueMSEs)^2, 
+          (LOOISPR2CVs - trueMSEs)^2, 
+          (LOOVCCVs - trueMSEs)^2, 
+          (LOOVCRCVs - trueMSEs)^2, 
+          (LOOVCR2CVs - trueMSEs)^2, 
+          (LOOCVCCVs - trueMSEs)^2, 
+          (LOOCVCRCVs - trueMSEs)^2, 
+          (LOOCVCR2CVs - trueMSEs)^2))
+  boxplot(MSE~Method, data=dat, col="skyblue", log="y", ylab="Estimator Sq. Err.")
+  dev.off()
+  
+  pdf(paste0(figureFolder, "selProbErr_n1", n, "_n2", n2, unifText, prefText, twoDatText, "_niter", niter, ".pdf"), width=8, height=6)
+  dat = data.frame(
+    Method=factor(rep(c("LOO", "LOO-IW", "LOO-IWP", "LOO-IWPR2", "LOO-VC", "LOO-VCR", "LOO-VCR2", "LOO-CVC", "LOO-CVCR", "LOO-CVCR2"), each=niter), 
+                  levels=c("LOO", "LOO-IW", "LOO-IWP", "LOO-IWPR2", "LOO-VC", "LOO-VCR", "LOO-VCR2", "LOO-CVC", "LOO-CVCR", "LOO-CVCR2"), ordered=FALSE), 
+    Probability=c((LOOCVs - LOOCVsWrong < 0), 
+          (LOOISCVs - LOOISCVsWrong < 0), 
+          (LOOISPCVs - LOOISPCVsWrong < 0), 
+          (LOOISPR2CVs - LOOISPR2CVsWrong < 0), 
+          (LOOVCCVs - LOOVCCVsWrong < 0), 
+          (LOOVCRCVs - LOOVCRCVsWrong < 0), 
+          (LOOVCR2CVs - LOOVCR2CVsWrong < 0), 
+          (LOOCVCCVs - LOOCVCCVsWrong < 0), 
+          (LOOCVCRCVs - LOOCVCRCVsWrong < 0), 
+          (LOOCVCR2CVs - LOOCVCR2CVsWrong < 0)))
+  datac <- summarySEwithin(dat, measurevar="Probability", withinvars=c("Method"))
+  #>    Shape   ColorScheme  N     Time Time_norm       sd        se        ci
+  #> 1  Round       Colored 12 43.58333  43.58333 1.212311 0.3499639 0.7702654
+  #> 2  Round Monochromatic 12 44.58333  44.58333 1.331438 0.3843531 0.8459554
+  #> 3 Square       Colored 12 42.58333  42.58333 1.461630 0.4219364 0.9286757
+  #> 4 Square Monochromatic 12 43.58333  43.58333 1.261312 0.3641095 0.8013997
+  ggplot(datac, aes(x=Method, y=Probability)) +
+    geom_bar(position=position_dodge(.9), colour="black", stat="identity") +
+    geom_errorbar(position=position_dodge(.9), width=.25, aes(ymin=Probability-ci, ymax=Probability+ci)) +
+    # coord_cartesian(ylim=c(40,46)) +
+    # scale_fill_manual(values=c("#CCCCCC","#FFFFFF")) +
+    # scale_y_continuous(breaks=seq(1:100)) +
+    theme_bw()
+  # geom_hline(yintercept=38)
+  dev.off()
+  
+  browser()
+  
   print(paste0("MSE of LOO: ", mean((LOOCVs - trueMSEs)^2)))
   print(paste0("MSE of LOOIS: ", mean((LOOISCVs - trueMSEs)^2)))
+  print(paste0("MSE of LOOISR: ", mean((LOOISRCVs - trueMSEs)^2)))
+  print(paste0("MSE of LOOISR: ", mean((LOOISR2CVs - trueMSEs)^2)))
+  print(paste0("MSE of LOOISP: ", mean((LOOISPCVs - trueMSEs)^2)))
+  print(paste0("MSE of LOOISPR: ", mean((LOOISPRCVs - trueMSEs)^2)))
+  print(paste0("MSE of LOOISPR: ", mean((LOOISPR2CVs - trueMSEs)^2)))
   print(paste0("MSE of LOOVC: ", mean((LOOVCCVs - trueMSEs)^2)))
+  print(paste0("MSE of LOOCVC: ", mean((LOOCVCCVs - trueMSEs)^2)))
+  print(paste0("MSE of LOOCVCR: ", mean((LOOCVCRCVs - trueMSEs)^2)))
+  print(paste0("MSE of LOOCVCR: ", mean((LOOCVCR2CVs - trueMSEs)^2)))
   
   print(paste0("MAE of LOO: ", mean(abs(LOOCVs - trueMSEs))))
   print(paste0("MAE of LOOIS: ", mean(abs(LOOISCVs - trueMSEs))))
@@ -523,576 +1309,6 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
   
   
   browser()
-}
-
-# Show why gridded cross validation fails as function of grid resolution. Fix a 
-# sampling distribution that is variable on unit square based on GRF, and for a 
-# number of different grid resolutions. Error will vary between LOO-CV error 
-# and asymptotic extrapolation error, the true predictive error being somewhere 
-# in between
-#   1.  for iter in 1:number of simulations:
-#   2.    Simulate 1 GRF on unit square for responses
-#   3.    Simulate 1 GRF on unit square for sample distribution
-#   4.    Simulate observations in domain based on the sampling distn and the GRF 
-#         for responses (don't include nugget)
-#   5.    Calculate full covariate matrix for sample and crossCov to all locs
-#   6.    for i in 1:number of block resolutions:
-#   7.      Group observations with blocks
-#   8.      Leave out one cell at a time, calculate gridded CV MSE
-#   9.    Leave out one observation at a time, calculate LOO-CV MSE
-#   10.   Calculate importance weighted LOO-CV MSE, or LOOIS-CV MSE
-#   11.   Calculate actual predictive MSE
-#   12.   Save result
-#   13. Combine and save all results
-# Note that the below function is a single iteration of the for loop 
-# for easy parallelization.
-griddedResTestIter = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, 
-                              n=50, gridNs=2^(1:6), iter=1, rGRFargsWrong=NULL, 
-                              nx=100, ny=100, sigmaEpsSq=0, allSeeds=123, 
-                              unif=FALSE, preferential=FALSE, alpha=0, beta=1, 
-                              printProgress=FALSE) {
-  
-  print(paste0("iteration ", iter, "/", length(allSeeds)))
-  
-  if(!is.null(allSeeds)) {
-    set.seed(allSeeds[iter])
-  }
-  
-  # set default GRF parameters
-  if(is.null(rGRFargsTruth)) {
-    rGRFargsTruth = list(mu=0, sigma=1, 
-                         cov.args=list(Covariance="Matern", range=0.2, smoothness=1.0), 
-                         delta=3, sigmaEpsSq=0, nx=nx, ny=ny)
-  }
-  if(is.null(rGRFargsWrong)) {
-    rGRFargsWrong = rGRFargsTruth
-    
-    if(n1==50) {
-      rGRFargsWrong$sigma = rGRFargsTruth$sigma*sqrt(1.30)
-    } else if(n1==500){
-      rGRFargsWrong$sigma = rGRFargsTruth$sigma*sqrt(1.10)
-    }
-  }
-  if(is.null(rGRFargsSample)) {
-    if(!unif) {
-      rGRFargsSample = list(mu=0, sigma=1, 
-                            cov.args=list(Covariance="Matern", range=0.2, smoothness=1.0), 
-                            delta=3, sigmaEpsSq=0, nx=nx, ny=ny)
-    } else {
-      rGRFargsSample = list(mu=0, sigma=0, 
-                            cov.args=list(Covariance="Matern", range=0.2, smoothness=1.0), 
-                            delta=3, sigmaEpsSq=0, nx=nx, ny=ny)
-    }
-    
-  }
-  
-  # 2. Simulate 1 GRF for responses ----
-  #    on unit square
-  truthGRF = do.call("rGRF", rGRFargsTruth)
-  truth = truthGRF$truth
-  locs = truthGRF$locs
-  
-  # 3. Simulate sample distribution ----
-  #    as 1 GRF on unit square
-  if(!preferential) {
-    sampleGRF = do.call("rGRF", rGRFargsSample)
-    sampleRates = exp(sampleGRF$truth)
-    sampleProbs = sampleRates * (1/sum(sampleRates))
-  } else {
-    sampleGRF = truthGRF
-    sampleRates = exp(alpha + beta * sampleGRF$truth)
-    sampleProbs = sampleRates * (1/sum(sampleRates))
-  }
-  
-  # 4. Simulate observations ----
-  #    in domain based on the sampling distn and the GRF 
-  #    for responses (don't include nugget?)
-  gridResX = 1/nx
-  gridResY = 1/ny
-  sampleI = sample(1:nrow(locs), n, prob=sampleProbs, replace=TRUE)
-  xs = locs[sampleI,] + cbind(runif(n, max=gridResX)-gridResX/2, 
-                              runif(n, max=gridResY)-gridResY/2)
-  ys = truth[sampleI] + rnorm(n, sd=sqrt(sigmaEpsSq))
-  
-  # 5. Get covariance matrices ----
-  #    for sample and crossCov to all locs
-  
-  SigmaSample = stationary.cov(xs, xs, Covariance="Matern", aRange=rGRFargsTruth$cov.args$range, 
-                               smoothness=rGRFargsTruth$cov.args$smoothness) * rGRFargsTruth$sigma^2
-  SigmaGridToSample = stationary.cov(locs, xs, Covariance="Matern", aRange=rGRFargsTruth$cov.args$range, 
-                                     smoothness=rGRFargsTruth$cov.args$smoothness) * rGRFargsTruth$sigma^2
-  
-  # 6. for i in 1:number block resolutions: ----
-  
-  # determine grid cells associated with observations
-  getCellI = function(thisLoc) {
-    xI = match(FALSE, thisLoc[1] > highs)
-    yI = match(FALSE, thisLoc[2] > highs)
-    
-    indMat[yI, xI]
-  }
-  
-  griddedCVs = numeric(length(gridNs))
-  for(i in 1:length(gridNs)) {
-    gridN = gridNs[i]
-    if(printProgress) {
-      print(paste0("grid resolution ", gridN, " (", i, "/", length(gridNs), ")"))
-    }
-    
-    # 7. Group data by block ----
-    # index cells and select test/train cells:
-    # cell i is in:
-    # row floor(i) + 1 (row counts upward along unit square)
-    # col floor(i/row) + i
-    nCellsTot = gridN^2
-    indMat = matrix(1:nCellsTot, nrow=gridN)
-    
-    highs = seq(0, 1, l=gridN+1)[-1]
-    cellIsSample = apply(xs, 1, getCellI)
-    uniqueCellIs = sort(unique(cellIsSample))
-    blockCVs = numeric(length(uniqueCellIs))
-    
-    # 8. Get gridded CV MSE ----
-    for(j in 1:length(uniqueCellIs)) {
-      if(printProgress) {
-        print(paste0("Leaving out cell ", j, "/", length(uniqueCellIs)))
-      }
-      
-      cellI = uniqueCellIs[j]
-      
-      # separate data in test/train
-      isTest = cellIsSample == cellI
-      testYs = ys[isTest]
-      trainYs = ys[!isTest]
-      
-      # predict test data
-      SigmaAB = matrix(SigmaSample[isTest, !isTest], nrow=sum(isTest))
-      SigmaBB = SigmaSample[!isTest, !isTest]
-      SigmaAA = SigmaSample[isTest, isTest]
-      
-      if((sum(isTest) > 0) && (sum(!isTest) > 0)) {
-        condDistn = condMeanMVN(SigmaAA=SigmaAA, SigmaAB=SigmaAB, SigmaBB=SigmaBB, 
-                                ysB=trainYs, getFullCov=FALSE, getCondVar=FALSE)
-        muAcondB = condDistn$muAcondB
-        
-        # calculate MSE for the grid cell
-        blockCVs[j] = mean((testYs - muAcondB)^2)
-      } else {
-        blockCVs[j] = NA
-      }
-    }
-    
-    # average over MSEs of each grid cell
-    griddedCVs[i] = mean(blockCVs, na.rm=TRUE)
-  }
-  
-  # 9. get LOO-CV MSE ----
-  LOOCVs = numeric(n)
-  for(i in 1:n) {
-    if(printProgress) {
-      print(paste0("Leaving out obs ", i, "/", n))
-    }
-    
-    # separate data in test/train
-    isTest = (1:n) == i
-    testYs = ys[isTest]
-    trainYs = ys[!isTest]
-    
-    # predict test data
-    SigmaAB = matrix(SigmaSample[isTest, !isTest], nrow=1)
-    SigmaBB = SigmaSample[!isTest, !isTest]
-    SigmaAA = SigmaSample[isTest, isTest]
-    
-    condDistn = condMeanMVN(SigmaAA=SigmaAA, SigmaAB=SigmaAB, SigmaBB=SigmaBB, 
-                            ysB=trainYs, getFullCov=FALSE, getCondVar=FALSE)
-    muAcondB = condDistn$muAcondB
-    
-    # calculate MSE for the grid cell
-    LOOCVs[i] = mean((testYs - muAcondB)^2)
-  }
-  LOOCV = mean(LOOCVs)
-  
-  # 10. Calculate LOOIS-CV MSE ----
-  cellArea = 1/(nx*ny)
-  LOOISrates = (sampleProbs[sampleI]/sum(sampleProbs)) / cellArea
-  # LOOISCV = weighted.mean(LOOCVs, w=cellArea/LOOISrates)
-  LOOISCV = sum(LOOCVs * (1/LOOISrates))/n
-  
-  # 11. Calculate LOOVC-CV MSE ----
-  vcellInfo = getVCellAreas(xs, domainPoly = rbind(c(0, 0), 
-                                                   c(0, 1), 
-                                                   c(1, 1), 
-                                                   c(1, 0), 
-                                                   c(0, 0)))
-  vcellArea = vcellInfo$area
-  rateEsts = 1/vcellArea
-  rateEsts = rateEsts/n # divide by n to get rate for a single pt draw instead of n pts
-  LOOVCCV = sum(LOOCVs * (1/rateEsts))/n
-  
-  # 12. Calculate true MSE ----
-  condDistn = condMeanMVN(SigmaAA=rep(1, nrow(locs)), SigmaAB=SigmaGridToSample, SigmaBB=SigmaSample, 
-                          ysB=ys, getFullCov=FALSE, getCondVar=FALSE)
-  muAcondB = condDistn$muAcondB
-  
-  # calculate MSE for the grid cell
-  trueMSE = mean((truth - muAcondB)^2)
-  
-  # rGRFargsTruth=NULL, rGRFargsSample=NULL, 
-  # n=50, gridNs=2^(1:6), iter=1, seed=123, 
-  # nx=100, ny=100, sigmaEpsSq=0
-  
-  if(FALSE) {
-    # out = estPredMSErange(sigma=1, cov.args=rGRFargsTruth$cov.args, doPlot=TRUE, 
-    #                       nPts=n)
-    
-    
-    plot(gridNs, griddedCVs, type="n", log="x", axes=FALSE, 
-         ylim=c(0, max(griddedCVs)), xlab="Blocks per side", 
-         ylab="MSE", main="Gridded CV vs resolution")
-    axis(side=1, at=gridNs)
-    axis(side=2)
-    box()
-    lines(gridNs, griddedCVs, type="o", pch=19, col="blue")
-    abline(h=LOOCV, lty=2, col="purple")
-    abline(h=trueMSE, lty=2, col="green")
-    legend("topright", c("Gridded", "LOO", "Truth"), col=c("blue", "purple", "green"), 
-           pch=c(19, NA, NA), lty=c(1, 2, 2))
-    
-    plot(gridNs, griddedCVs, type="n", log="x", axes=FALSE, 
-         ylim=c(0, 1+sigmaEpsSq), xlab="Blocks per side", 
-         ylab="MSE", main="Gridded CV vs resolution")
-    axis(side=1, at=gridNs)
-    axis(side=2)
-    box()
-    lines(gridNs, griddedCVs, type="o", pch=19, col="blue")
-    abline(h=LOOCV, lty=2, col="purple")
-    abline(h=trueMSE, lty=2, col="green")
-    abline(h=1+sigmaEpsSq, lty=2, col="red")
-    legend("right", c("Gridded", "LOO", "Extrapolation", "Interpolation"), 
-           col=c("blue", "purple", "red", "green"), 
-           pch=c(19, NA, NA, NA), lty=c(1, 2, 2, 2))
-  }
-  
-  # 13. Save result ----
-  # browser()
-  unifText = ifelse(unif, "_unif", "")
-  prefText = ifelse(preferential, paste0("_prefA", alpha, "B", beta), "")
-  save(trueMSE, LOOCVs, LOOCV, griddedCVs, gridNs, 
-       iter, rGRFargsTruth, rGRFargsSample, 
-       n, nx, ny, sigmaEpsSq, allSeeds, 
-       alpha, beta, 
-       file=paste0("savedOutput/griddedCVtest/n", n, "_iter", iter, unifText, prefText, twoDatText, ".RData"))
-  
-  list(trueMSE=trueMSE, LOOCVs=LOOCVs, LOOCV=LOOCV, 
-       LOOISCV=LOOISCV, LOOVCCV=LOOVCCV, griddedCVs=griddedCVs, 
-       gridNs=gridNs, iter=iter, rGRFargsTruth=rGRFargsTruth, 
-       rGRFargsSample=rGRFargsSample, 
-       n=n, nx=nx, ny=ny, sigmaEpsSq=sigmaEpsSq, 
-       allSeeds=allSeeds)
-}
-
-# Show why gridded cross validation fails as function of grid resolution. Fix a 
-# sampling distribution that is variable on unit square based on GRF, and for a 
-# number of different grid resolutions. Error will vary between LOO-CV error 
-# and asymptotic extrapolation error, the true predictive error being somewhere 
-# in between
-#   1.  for iter in 1:number of simulations:
-#   2.    Simulate 1 GRF on unit square for responses
-#   3.    Simulate 2 GRFs on unit square for sample distributions
-#   4.    Simulate observations in domain based on the sampling distn and the GRF 
-#         for responses include nugget
-#   5.    Calculate full covariate matrix for sample and crossCov to all locs
-#   6.    for i in 1:number of block resolutions:
-#   7.      Group observations with blocks
-#   8.      Leave out one cell at a time, calculate gridded CV MSE
-#   9.    Leave out one observation at a time, calculate LOO-CV MSE
-#   10.   Calculate importance weighted LOO-CV MSE, or LOOIS-CV MSE
-#   11.   Calculate actual predictive MSE
-#   12.   Save result
-#   13. Combine and save all results
-# Note that the below function is a single iteration of the for loop 
-# for easy parallelization.
-griddedResTestIter2Datasets = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, 
-                                       n1=50, n2=n1, gridNs=2^(1:6), iter=1, rGRFargsWrong=NULL, 
-                                       nx=100, ny=100, sigmaEpsSq1=.1^2, sigmaEpsSq2=1^2, allSeeds=123, 
-                                       alpha=0, beta=1, rho=-.8, printProgress=FALSE) {
-  
-  print(paste0("iteration ", iter, "/", length(allSeeds)))
-  
-  if(!is.null(allSeeds)) {
-    set.seed(allSeeds[iter])
-  }
-  
-  # set default GRF parameters
-  if(is.null(rGRFargsTruth)) {
-    rGRFargsTruth = list(mu=0, sigma=1, 
-                         cov.args=list(Covariance="Matern", range=0.2, smoothness=1.0), 
-                         delta=3, sigmaEpsSq=0, nx=nx, ny=ny)
-  }
-  if(is.null(rGRFargsWrong)) {
-    rGRFargsWrong = rGRFargsTruth
-    
-    if(n1 == 50) {
-      rGRFargsWrong$sigma = rGRFargsTruth$sigma*sqrt(4)
-    } else if(n1 == 500) {
-      rGRFargsWrong$sigma = rGRFargsTruth$sigma*sqrt(2)
-    } else if(n1 == 1000) {
-      rGRFargsWrong$sigma = rGRFargsTruth$sigma*sqrt(1.75)
-    }
-  }
-  if(is.null(rGRFargsSample)) {
-    rGRFargsSample = list(mu1=0, mu2=0, sigma1=1, sigma2=1, rho=rho, 
-                          cov.args=list(Covariance="Matern", range=0.2, smoothness=1.0), 
-                          delta=3, sigmaEpsSq1=0, sigmaEpsSq2=0, nx=nx, ny=ny)
-  }
-  
-  # 2. Simulate 1 GRF for responses ----
-  #    on unit square
-  truthGRF = do.call("rGRF", rGRFargsTruth)
-  truth = truthGRF$truth
-  locs = truthGRF$locs
-  
-  # 3. Simulate sample distribution ----
-  #    as 2 GRF on unit square
-  sampleGRFs = do.call("r2GRFs", rGRFargsSample)
-  sampleGRF1 = sampleGRFs$Y1
-  sampleGRF2 = sampleGRFs$Y2
-  sampleRates1 = exp(sampleGRF1$truth)
-  sampleProbs1 = sampleRates1 * (1/sum(sampleRates1))
-  sampleRates2 = exp(sampleGRF2$truth)
-  sampleProbs2 = sampleRates2 * (1/sum(sampleRates2))
-  
-  # relevant sampleRates and sampleProbs for validation are those of the first dataset
-  sampleRates = sampleRates1
-  sampleProbs = sampleProbs1
-  
-  # 4. Simulate observations ----
-  #    in domain based on the sampling distn and the GRF 
-  #    for responses (don't include nugget?)
-  gridResX = 1/nx
-  gridResY = 1/ny
-  sampleI1 = sample(1:nrow(locs), n1, prob=sampleProbs1, replace=TRUE)
-  xs1 = locs[sampleI1,] + cbind(runif(n1, max=gridResX)-gridResX/2, 
-                                runif(n1, max=gridResY)-gridResY/2)
-  ys1 = truth[sampleI1] + rnorm(n1, sd=sqrt(sigmaEpsSq1))
-  sampleI2 = sample(1:nrow(locs), n2, prob=sampleProbs2, replace=TRUE)
-  xs2 = locs[sampleI2,] + cbind(runif(n2, max=gridResX)-gridResX/2, 
-                                runif(n2, max=gridResY)-gridResY/2)
-  ys2 = truth[sampleI2] + rnorm(n2, sd=sqrt(sigmaEpsSq2))
-  
-  xs = rbind(xs1, xs2)
-  ys = c(ys1, ys2)
-  
-  # 5. Get covariance matrices ----
-  #    for sample and crossCov to all locs
-  
-  SigmaSample = stationary.cov(xs, xs, Covariance="Matern", aRange=rGRFargsTruth$cov.args$range, 
-                               smoothness=rGRFargsTruth$cov.args$smoothness) * rGRFargsTruth$sigma^2
-  SigmaSampleWrong = stationary.cov(xs, xs, Covariance="Matern", aRange=rGRFargsWrong$cov.args$range, 
-                               smoothness=rGRFargsWrong$cov.args$smoothness) * rGRFargsWrong$sigma^2
-  SigmaSample = SigmaSample + diag(c(rep(sigmaEpsSq1, n1), rep(sigmaEpsSq2, n2)))
-  SigmaSampleWrong = SigmaSampleWrong + diag(c(rep(sigmaEpsSq1, n1), rep(sigmaEpsSq2, n2)))
-  SigmaGridToSample = stationary.cov(locs, xs, Covariance="Matern", aRange=rGRFargsTruth$cov.args$range, 
-                                     smoothness=rGRFargsTruth$cov.args$smoothness) * rGRFargsTruth$sigma^2
-  SigmaGridToSampleWrong = stationary.cov(locs, xs, Covariance="Matern", aRange=rGRFargsWrong$cov.args$range, 
-                                     smoothness=rGRFargsWrong$cov.args$smoothness) * rGRFargsWrong$sigma^2
-  
-  # 6. for i in 1:number block resolutions: ----
-  
-  # determine grid cells associated with observations
-  getCellI = function(thisLoc) {
-    xI = match(FALSE, thisLoc[1] > highs)
-    yI = match(FALSE, thisLoc[2] > highs)
-    
-    indMat[yI, xI]
-  }
-  
-  griddedCVs = numeric(length(gridNs))
-  griddedCVsWrong = numeric(length(gridNs))
-  for(i in 1:length(gridNs)) {
-    gridN = gridNs[i]
-    if(printProgress) {
-      print(paste0("grid resolution ", gridN, " (", i, "/", length(gridNs), ")"))
-    }
-    
-    # 7. Group data by block ----
-    # index cells and select test/train cells:
-    # cell i is in:
-    # row floor(i) + 1 (row counts upward along unit square)
-    # col floor(i/row) + i
-    nCellsTot = gridN^2
-    indMat = matrix(1:nCellsTot, nrow=gridN)
-    
-    highs = seq(0, 1, l=gridN+1)[-1]
-    cellIsSample = apply(xs1, 1, getCellI) # only leave out observations from first dataset
-    uniqueCellIs = sort(unique(cellIsSample))
-    blockCVs = numeric(length(uniqueCellIs))
-    blockCVsWrong = numeric(length(uniqueCellIs))
-    
-    # 8. Get gridded CV MSE ----
-    for(j in 1:length(uniqueCellIs)) {
-      if(printProgress) {
-        print(paste0("Leaving out cell ", j, "/", length(uniqueCellIs)))
-      }
-      
-      cellI = uniqueCellIs[j]
-      
-      # separate data in test/train
-      isTest = c(cellIsSample == cellI, rep(FALSE, n2))
-      testYs = ys[isTest]
-      trainYs = ys[!isTest]
-      
-      # predict test data for both true and wrong model
-      SigmaAB = matrix(SigmaSample[isTest, !isTest], nrow=sum(isTest))
-      SigmaBB = SigmaSample[!isTest, !isTest]
-      SigmaAA = SigmaSample[isTest, isTest]
-      
-      SigmaABWrong = matrix(SigmaSampleWrong[isTest, !isTest], nrow=sum(isTest))
-      SigmaBBWrong = SigmaSampleWrong[!isTest, !isTest]
-      SigmaAAWrong = SigmaSampleWrong[isTest, isTest]
-      
-      if((sum(isTest) > 0) && (sum(!isTest) > 0)) {
-        condDistn = condMeanMVN(SigmaAA=SigmaAA, SigmaAB=SigmaAB, SigmaBB=SigmaBB, 
-                                ysB=trainYs, getFullCov=FALSE, getCondVar=FALSE)
-        muAcondB = condDistn$muAcondB
-        
-        condDistnWrong = condMeanMVN(SigmaAA=SigmaAAWrong, SigmaAB=SigmaABWrong, SigmaBB=SigmaBBWrong, 
-                                ysB=trainYs, getFullCov=FALSE, getCondVar=FALSE)
-        muAcondBWrong = condDistnWrong$muAcondB
-        
-        # calculate MSE for the grid cell
-        blockCVs[j] = mean((testYs - muAcondB)^2)
-        blockCVsWrong[j] = mean((testYs - muAcondBWrong)^2)
-      } else {
-        blockCVs[j] = NA
-        blockCVsWrong[j] = NA
-      }
-    }
-    
-    # average over MSEs of each grid cell
-    griddedCVs[i] = mean(blockCVs, na.rm=TRUE)
-    griddedCVsWrong[i] = mean(blockCVsWrong, na.rm=TRUE)
-  }
-  
-  # 9. get LOO-CV MSE ----
-  LOOCVs = numeric(n1)
-  LOOCVsWrong = numeric(n1)
-  for(i in 1:n1) {
-    if(printProgress) {
-      print(paste0("Leaving out obs ", i, "/", n1))
-    }
-    
-    # separate data in test/train
-    isTest = (1:(n1+n2)) == i
-    testYs = ys[isTest]
-    trainYs = ys[!isTest]
-    
-    # predict test data
-    SigmaAB = matrix(SigmaSample[isTest, !isTest], nrow=1)
-    SigmaBB = SigmaSample[!isTest, !isTest]
-    SigmaAA = SigmaSample[isTest, isTest]
-    
-    SigmaABWrong = matrix(SigmaSampleWrong[isTest, !isTest], nrow=1)
-    SigmaBBWrong = SigmaSampleWrong[!isTest, !isTest]
-    SigmaAAWrong = SigmaSampleWrong[isTest, isTest]
-    
-    condDistn = condMeanMVN(SigmaAA=SigmaAA, SigmaAB=SigmaAB, SigmaBB=SigmaBB, 
-                            ysB=trainYs, getFullCov=FALSE, getCondVar=FALSE)
-    muAcondB = condDistn$muAcondB
-    
-    condDistnWrong = condMeanMVN(SigmaAA=SigmaAAWrong, SigmaAB=SigmaABWrong, SigmaBB=SigmaBBWrong, 
-                            ysB=trainYs, getFullCov=FALSE, getCondVar=FALSE)
-    muAcondBWrong = condDistnWrong$muAcondB
-    
-    # calculate MSE for the grid cell
-    LOOCVs[i] = mean((testYs - muAcondB)^2)
-    LOOCVsWrong[i] = mean((testYs - muAcondBWrong)^2)
-  }
-  LOOCV = mean(LOOCVs)
-  LOOCVWrong = mean(LOOCVsWrong)
-  
-  # 10. Calculate LOOIS-CV MSE ----
-  cellArea = 1/(nx*ny)
-  LOOISrates = (sampleProbs[sampleI1]/sum(sampleProbs)) / cellArea
-  # LOOISCV = weighted.mean(LOOCVs, w=cellArea/LOOISrates)
-  LOOISCV = sum(LOOCVs * (1/LOOISrates))/n1
-  LOOISCVWrong = sum(LOOCVsWrong * (1/LOOISrates))/n1
-  
-  # 11. Calculate LOOVC-CV MSE ----
-  vcellInfo = getVCellAreas(xs1, domainPoly = rbind(c(0, 0), 
-                                                    c(0, 1), 
-                                                    c(1, 1), 
-                                                    c(1, 0), 
-                                                    c(0, 0)))
-  vcellArea = vcellInfo$area
-  rateEsts = 1/vcellArea
-  rateEsts = rateEsts/n1 # divide by n to get rate for a single pt draw instead of n pts
-  LOOVCCV = sum(LOOCVs * (1/rateEsts))/n1
-  LOOVCCVWrong = sum(LOOCVsWrong * (1/rateEsts))/n1
-  
-  # 12. Calculate true MSE ----
-  condDistn = condMeanMVN(SigmaAA=rep(1, nrow(locs)), SigmaAB=SigmaGridToSample, SigmaBB=SigmaSample, 
-                          ysB=ys, getFullCov=FALSE, getCondVar=FALSE)
-  muAcondB = condDistn$muAcondB
-  
-  # calculate MSE for the grid cell
-  trueMSE = mean((truth - muAcondB)^2) + sigmaEpsSq1
-  
-  # rGRFargsTruth=NULL, rGRFargsSample=NULL, 
-  # n=50, gridNs=2^(1:6), iter=1, seed=123, 
-  # nx=100, ny=100, sigmaEpsSq=0
-  
-  if(FALSE) {
-    # out = estPredMSErange(sigma=1, cov.args=rGRFargsTruth$cov.args, doPlot=TRUE, 
-    #                       nPts=n)
-    
-    
-    plot(gridNs, griddedCVs, type="n", log="x", axes=FALSE, 
-         ylim=c(0, max(griddedCVs)), xlab="Blocks per side", 
-         ylab="MSE", main="Gridded CV vs resolution")
-    axis(side=1, at=gridNs)
-    axis(side=2)
-    box()
-    lines(gridNs, griddedCVs, type="o", pch=19, col="blue")
-    abline(h=LOOCV, lty=2, col="purple")
-    abline(h=trueMSE, lty=2, col="green")
-    legend("topright", c("Gridded", "LOO", "Truth"), col=c("blue", "purple", "green"), 
-           pch=c(19, NA, NA), lty=c(1, 2, 2))
-    
-    plot(gridNs, griddedCVs, type="n", log="x", axes=FALSE, 
-         ylim=c(0, 1+sigmaEpsSq), xlab="Blocks per side", 
-         ylab="MSE", main="Gridded CV vs resolution")
-    axis(side=1, at=gridNs)
-    axis(side=2)
-    box()
-    lines(gridNs, griddedCVs, type="o", pch=19, col="blue")
-    abline(h=LOOCV, lty=2, col="purple")
-    abline(h=trueMSE, lty=2, col="green")
-    abline(h=1+sigmaEpsSq, lty=2, col="red")
-    legend("right", c("Gridded", "LOO", "Extrapolation", "Interpolation"), 
-           col=c("blue", "purple", "red", "green"), 
-           pch=c(19, NA, NA, NA), lty=c(1, 2, 2, 2))
-  }
-  
-  # 13. Save result ----
-  # browser()
-  save(trueMSE, LOOCVs, LOOCVsWrong, LOOCV, LOOCVWrong, 
-       LOOISCV, LOOISCVWrong, LOOVCCV, LOOVCCVWrong, 
-       griddedCVs, griddedCVsWrong, gridNs, 
-       iter, rGRFargsTruth, rGRFargsSample, rGRFargsWrong, rho, 
-       n1, n2, nx, ny, sigmaEpsSq1, sigmaEpsSq2, 
-       alpha, beta, allSeeds, 
-       file=paste0("savedOutput/griddedCVtest2Datasets/n1", n1, "_n2", n2, "_rho", rho, "_iter", iter, ".RData"))
-  
-  list(trueMSE=trueMSE, LOOCVs=LOOCVs, LOOCVsWrong=LOOCVsWrong, 
-       LOOCV=LOOCV, LOOCVWrong=LOOCVWrong, 
-       LOOISCV=LOOISCV, LOOISCVWrong=LOOISCVWrong, 
-       LOOVCCV=LOOVCCV, LOOVCCVWrong=LOOVCCVWrong, 
-       griddedCVs=griddedCVs, griddedCVsWrong=griddedCVsWrong, 
-       gridNs=gridNs, iter=iter, rGRFargsTruth=rGRFargsTruth, 
-       rGRFargsSample=rGRFargsSample, rGRFargsWrong=rGRFargsWrong, 
-       n1=n1, n2=n2, nx=nx, ny=ny, rho=rho, sigmaEpsSq1=sigmaEpsSq1, 
-       sigmaEpsSq2=sigmaEpsSq2, allSeeds=allSeeds)
 }
 
 # fit 2 GRFs on field unit square, one with true parameters, other with false parameters. 
