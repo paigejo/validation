@@ -20,14 +20,27 @@
 # for easy parallelization.
 griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL, 
                                           propMount=.3, propSamplesMount=propMount/5, 
-                                          n1=50, gridNs=2^(1:6), iter=1, 
+                                          n1=50, gridNs=2^(1:6), Ks=c(9, 25), iter=1, 
                                           rGRFargsWrong1=NULL, rGRFargsWrong2=NULL, 
                                           nx=100, ny=100, sigmaEpsSqNonMount=.1^2, sigmaEpsSqMount=1^2, 
                                           sigmaEpsSqNonMountWrong1=.1^2, sigmaEpsSqMountWrong1=.1^2, 
                                           sigmaEpsSqNonMountWrong2=.15^2, sigmaEpsSqMountWrong2=.9^2, 
-                                          allSeeds=123, printProgress=FALSE) {
+                                          allSeeds=123, printProgress=FALSE, printPhat=FALSE) {
   
   print(paste0("iteration ", iter, "/", length(allSeeds)))
+  
+  doLOO = TRUE
+  if(n1 > 50) {
+    gridNs = c(3, 5)
+    
+    if(n1 > 500) {
+      doLOO = FALSE
+      if(n1 > 2000) {
+        Ks = Ks[Ks <= 10]
+      }
+    }
+  }
+  
   
   if(!is.null(allSeeds)) {
     set.seed(allSeeds[iter])
@@ -57,7 +70,7 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
   truth = truthGRF$truth
   locs = truthGRF$locs
   
-  # 2. Simulate 1 GRF for mountains ----
+  # 2.5. Simulate 1 GRF for mountains ----
   #    on unit square
   mountGRF = do.call("rGRF", rGRFargsMount)
   mountCov = mountGRF$truth
@@ -66,7 +79,7 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
   # 3. Simulate sample distribution ----
   #    on mountainous and non-mountainous part of domain
   sampleRates = rep(1, nrow(locs))
-  nMount = round(n1*propMount)
+  nMount = round(n1*propSamplesMount)
   nNonMount = n1 - nMount
   sampleRates[isMount] = nMount/propMount
   sampleRates[!isMount] = nNonMount/(1-propMount)
@@ -92,10 +105,26 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
   
   xs = rbind(xsMount, xsNonMount)
   ys = c(ysMount, ysNonMount)
+  sampleI = c(sampleIMount, sampleINonMount)
   mounts = c(rep(TRUE, nMount), rep(FALSE, nNonMount))
   sigmaEpsSqWrong1 = c(rep(sigmaEpsSqMountWrong1, nMount), rep(sigmaEpsSqNonMountWrong1, nNonMount))
   sigmaEpsSqWrong2 = c(rep(sigmaEpsSqMountWrong2, nMount), rep(sigmaEpsSqNonMountWrong2, nNonMount))
   sigmaEpsSqTrue = c(rep(sigmaEpsSqMount, nMount), rep(sigmaEpsSqNonMount, nNonMount))
+  
+  # 4.5. Set folds ----
+  foldI = matrix(nrow=n1, ncol=length(Ks))
+  for(i in 1:length(Ks)) {
+    K = Ks[i]
+    numPerFold = diff(floor(seq(0, n1, by=n1/K)))
+    indsLeft = 1:n1
+    
+    for(j in 1:length(numPerFold)) {
+      thisFoldN = numPerFold[j]
+      thisFoldI = sample(indsLeft, thisFoldN, replace=FALSE)
+      foldI[thisFoldI,i] = j
+      indsLeft = indsLeft[!(indsLeft %in% thisFoldI)]
+    }
+  }
   
   # 5. Get covariance matrices ----
   #    for sample and crossCov to all locs
@@ -106,7 +135,7 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
                                     smoothness=rGRFargsWrong1$cov.args$smoothness, distMat=distMatXs) * rGRFargsWrong1$sigma^2
   SigmaSampleWrong2 = stationary.cov(xs, xs, Covariance="Matern", aRange=rGRFargsWrong2$cov.args$range, 
                                      smoothness=rGRFargsWrong2$cov.args$smoothness, distMat=distMatXs) * rGRFargsWrong2$sigma^2
-  SigmaSample = SigmaSample + diag(c(rep(sigmaEpsSq1, n1), rep(sigmaEpsSq2, n2)))
+  SigmaSample = SigmaSample + diag(sigmaEpsSqTrue)
   SigmaSampleWrong1 = SigmaSampleWrong1 + diag(sigmaEpsSqWrong1)
   SigmaSampleWrong2 = SigmaSampleWrong2 + diag(sigmaEpsSqWrong2)
   distLocsToXs = rdist(locs, xs)
@@ -153,7 +182,7 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
     blockCVsWrong2 = numeric(length(uniqueCellIs))
     ns = numeric(length(uniqueCellIs))
     
-    # 8. Get gridded CV MSE ----
+    # 8. Get gridded CV CRPS ----
     for(j in 1:length(uniqueCellIs)) {
       if(printProgress) {
         print(paste0("Leaving out cell ", j, "/", length(uniqueCellIs)))
@@ -190,12 +219,12 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
         
         condDistnWrong1 = condMeanMVN(SigmaAA=SigmaAAWrong1, SigmaAB=SigmaABWrong1, SigmaBB=SigmaBBWrong1, 
                                      ysB=trainYs, getFullCov=FALSE, getCondVar=TRUE)
-        muAcondBWrong = condDistnWrong1$muAcondB
+        muAcondBWrong1 = condDistnWrong1$muAcondB
         varAcondBWrong1 = condDistnWrong1$varAcondB
         
         condDistnWrong2 = condMeanMVN(SigmaAA=SigmaAAWrong2, SigmaAB=SigmaABWrong2, SigmaBB=SigmaBBWrong2, 
                                       ysB=trainYs, getFullCov=FALSE, getCondVar=TRUE)
-        muAcondBWrong = condDistnWrong2$muAcondB
+        muAcondBWrong2 = condDistnWrong2$muAcondB
         varAcondBWrong2 = condDistnWrong2$varAcondB
         
         # # calculate MSE for the grid cell
@@ -209,178 +238,412 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
         blockCVsWrong2[j] = crps(truth=testYs, est=muAcondBWrong2, my.var=varAcondBWrong2)
       } else {
         blockCVs[j] = NA
-        blockCVsWrong[j] = NA
+        blockCVsWrong1[j] = NA
+        blockCVsWrong2[j] = NA
       }
     }
     
     # average over MSEs of each grid cell
     griddedCVs[i] = mean(blockCVs, na.rm=TRUE)
-    griddedCVsWrong[i] = mean(blockCVsWrong, na.rm=TRUE)
+    griddedCVsWrong1[i] = mean(blockCVsWrong1, na.rm=TRUE)
+    griddedCVsWrong2[i] = mean(blockCVsWrong2, na.rm=TRUE)
   }
   
-  # 9. get LOO-CV MSE ----
-  LOOCVs = numeric(n1)
-  LOOCVsWrong = numeric(n1)
-  for(i in 1:n1) {
+  # 6. for i in 1:number fold resolutions: ----
+  
+  KFoldCVs = matrix(nrow=n1, ncol=length(Ks))
+  KFoldCVsWrong1 = matrix(nrow=n1, ncol=length(Ks))
+  KFoldCVsWrong2 = matrix(nrow=n1, ncol=length(Ks))
+  
+  KFoldCV = numeric(length(Ks))
+  KFoldCVWrong1 = numeric(length(Ks))
+  KFoldCVWrong2 = numeric(length(Ks))
+  
+  KFoldCV = numeric(length(Ks))
+  KFoldCVWrong1 = numeric(length(Ks))
+  KFoldCVWrong2 = numeric(length(Ks))
+  
+  KFoldRCV = numeric(length(Ks))
+  KFoldRCVWrong1 = numeric(length(Ks))
+  KFoldRCVWrong2 = numeric(length(Ks))
+  
+  KFoldR2CV = numeric(length(Ks))
+  KFoldR2CVWrong1 = numeric(length(Ks))
+  KFoldR2CVWrong2 = numeric(length(Ks))
+  
+  cellArea = 1/(nx*ny)
+  KFoldISrates = numeric(length(Ks))
+  KFoldISCV = numeric(length(Ks))
+  KFoldISCVWrong1 = numeric(length(Ks))
+  KFoldISCVWrong2 = numeric(length(Ks))
+  
+  KFoldISPCV = numeric(length(Ks))
+  KFoldISPCVWrong1 = numeric(length(Ks))
+  KFoldISPCVWrong2 = numeric(length(Ks))
+  
+  KFoldISRCV = numeric(length(Ks))
+  KFoldISRCVWrong1 = numeric(length(Ks))
+  KFoldISRCVWrong2 = numeric(length(Ks))
+  
+  KFoldISR2CV = numeric(length(Ks))
+  KFoldISR2CVWrong1 = numeric(length(Ks))
+  KFoldISR2CVWrong2 = numeric(length(Ks))
+  
+  KFoldISPRCV = numeric(length(Ks))
+  KFoldISPRCVWrong1 = numeric(length(Ks))
+  KFoldISPRCVWrong2 = numeric(length(Ks))
+  
+  KFoldISPR2CV = numeric(length(Ks))
+  KFoldISPR2CVWrong1 = numeric(length(Ks))
+  KFoldISPR2CVWrong2 = numeric(length(Ks))
+  
+  KFoldVCCV = numeric(length(Ks))
+  KFoldVCCVWrong1 = numeric(length(Ks))
+  KFoldVCCVWrong2 = numeric(length(Ks))
+  
+  KFoldVCRCV = numeric(length(Ks))
+  KFoldVCRCVWrong1 = numeric(length(Ks))
+  KFoldVCRCVWrong2 = numeric(length(Ks))
+  
+  KFoldVCR2CV = numeric(length(Ks))
+  KFoldVCR2CVWrong1 = numeric(length(Ks))
+  KFoldVCR2CVWrong2 = numeric(length(Ks))
+  for(i in 1:length(Ks)) {
+    K = Ks[i]
     if(printProgress) {
-      print(paste0("Leaving out obs ", i, "/", n1))
+      print(paste0("K: ", K, " (", i, "/", length(Ks), ")"))
     }
     
-    # separate data in test/train
-    isTest = (1:(n1+n2)) == i
-    testYs = ys[isTest]
-    trainYs = ys[!isTest]
+    # 7. Group data by fold ----
+    thisFoldI = foldI[,i]
     
-    # predict test data
-    SigmaAB = matrix(SigmaSample[isTest, !isTest], nrow=1)
-    SigmaBB = SigmaSample[!isTest, !isTest]
-    SigmaAA = SigmaSample[isTest, isTest]
+    # 8. Get K fold CV CRPS ----
+    for(j in 1:K) {
+      if(printProgress) {
+        print(paste0("Leaving out fold ", j, "/", K))
+      }
+      
+      # separate data in test/train
+      isTest = thisFoldI == j
+      testYs = ys[isTest]
+      trainYs = ys[!isTest]
+      
+      # predict test data for both true and wrong model
+      SigmaAB = matrix(SigmaSample[isTest, !isTest], nrow=sum(isTest))
+      SigmaBB = SigmaSample[!isTest, !isTest]
+      SigmaAA = SigmaSample[isTest, isTest]
+      
+      SigmaABWrong1 = matrix(SigmaSampleWrong1[isTest, !isTest], nrow=sum(isTest))
+      SigmaBBWrong1 = SigmaSampleWrong1[!isTest, !isTest]
+      SigmaAAWrong1 = SigmaSampleWrong1[isTest, isTest]
+      
+      SigmaABWrong2 = matrix(SigmaSampleWrong2[isTest, !isTest], nrow=sum(isTest))
+      SigmaBBWrong2 = SigmaSampleWrong2[!isTest, !isTest]
+      SigmaAAWrong2 = SigmaSampleWrong2[isTest, isTest]
+      
+      condDistn = condMeanMVN(SigmaAA=SigmaAA, SigmaAB=SigmaAB, SigmaBB=SigmaBB, 
+                              ysB=trainYs, getFullCov=FALSE, getCondVar=TRUE)
+      muAcondB = condDistn$muAcondB
+      varAcondB = condDistn$varAcondB
+      
+      condDistnWrong1 = condMeanMVN(SigmaAA=SigmaAAWrong1, SigmaAB=SigmaABWrong1, SigmaBB=SigmaBBWrong1, 
+                                    ysB=trainYs, getFullCov=FALSE, getCondVar=TRUE)
+      muAcondBWrong1 = condDistnWrong1$muAcondB
+      varAcondBWrong1 = condDistnWrong1$varAcondB
+      
+      condDistnWrong2 = condMeanMVN(SigmaAA=SigmaAAWrong2, SigmaAB=SigmaABWrong2, SigmaBB=SigmaBBWrong2, 
+                                    ysB=trainYs, getFullCov=FALSE, getCondVar=TRUE)
+      muAcondBWrong2 = condDistnWrong2$muAcondB
+      varAcondBWrong2 = condDistnWrong2$varAcondB
+      
+      # # calculate MSE for the fold
+      # foldCVs[i] = mean((testYs - muAcondB)^2)
+      # foldCVsWrong1[i] = mean((testYs - muAcondBWrong1)^2)
+      # foldCVsWrong2[i] = mean((testYs - muAcondBWrong2)^2)
+      
+      # calculate CRPS for each observation in the fold
+      KFoldCVs[isTest,i] = crps(truth=testYs, est=muAcondB, my.var=varAcondB, getAverage = FALSE)
+      KFoldCVsWrong1[isTest,i] = crps(truth=testYs, est=muAcondBWrong1, my.var=varAcondBWrong1, getAverage = FALSE)
+      KFoldCVsWrong2[isTest,i] = crps(truth=testYs, est=muAcondBWrong2, my.var=varAcondBWrong2, getAverage = FALSE)
+    }
     
-    SigmaABWrong1 = matrix(SigmaSampleWrong1[isTest, !isTest], nrow=1)
-    SigmaBBWrong1 = SigmaSampleWrong1[!isTest, !isTest]
-    SigmaAAWrong1 = SigmaSampleWrong1[isTest, isTest]
+    # average over CRPSs of each observation over all folds, for each value of K
+    KFoldCV[i] = mean(KFoldCVs[,i], na.rm=TRUE)
+    KFoldCVWrong1[i] = mean(KFoldCVsWrong1[,i], na.rm=TRUE)
+    KFoldCVWrong2[i] = mean(KFoldCVsWrong2[,i], na.rm=TRUE)
     
-    SigmaABWrong2 = matrix(SigmaSampleWrong2[isTest, !isTest], nrow=1)
-    SigmaBBWrong2 = SigmaSampleWrong2[!isTest, !isTest]
-    SigmaAAWrong2 = SigmaSampleWrong2[isTest, isTest]
+    # get control variates
+    minDistsGrid = apply(distLocsToXs, 1, min)
+    minDistMu = mean(minDistsGrid)
+    minDistsGrid2 = apply(distLocsToXs, 1, function(x) {sort(x)[2]})
+    minDistMu2 = mean(minDistsGrid2)
+    minDists = apply(distMatXs, 1, function(x) {min(x[x != 0])}) # distance to nearest neighbor
+    minDists2 = apply(distMatXs, 1, function(x) {sort(x[x != 0])[2]}) # distance to second nearest neighbor
     
-    condDistn = condMeanMVN(SigmaAA=SigmaAA, SigmaAB=SigmaAB, SigmaBB=SigmaBB, 
-                            ysB=trainYs, getFullCov=FALSE, getCondVar=TRUE)
-    muAcondB = condDistn$muAcondB
-    varAcondB = condDistn$varAcondB
+    KFoldRCV[i] = getWeightedControlVarEst(Ys=KFoldCVs[,i], Zf=minDists, muf=minDistMu, printPhat=printPhat)[1]
+    KFoldRCVWrong1[i] = getWeightedControlVarEst(Ys=KFoldCVsWrong1[,i], Zf=minDists, muf=minDistMu, printPhat=printPhat)[1]
+    KFoldRCVWrong2[i] = getWeightedControlVarEst(Ys=KFoldCVsWrong2[,i], Zf=minDists, muf=minDistMu, printPhat=printPhat)[1]
     
-    condDistnWrong1 = condMeanMVN(SigmaAA=SigmaAAWrong1, SigmaAB=SigmaABWrong1, SigmaBB=SigmaBBWrong1, 
-                                 ysB=trainYs, getFullCov=FALSE, getCondVar=TRUE)
-    muAcondBWrong1 = condDistnWrong1$muAcondB
-    varAcondBWrong1 = condDistnWrong1$varAcondB
+    KFoldR2CV[i] = getWeightedControlVarEst(Ys=KFoldCVs[,i], Zf=cbind(minDists, minDists2), muf=c(minDistMu, minDistMu2), printPhat=printPhat)[1]
+    KFoldR2CVWrong1[i] = getWeightedControlVarEst(Ys=KFoldCVsWrong1[,i], Zf=cbind(minDists, minDists2), muf=c(minDistMu, minDistMu2), printPhat=printPhat)[1]
+    KFoldR2CVWrong2[i] = getWeightedControlVarEst(Ys=KFoldCVsWrong2[,i], Zf=cbind(minDists, minDists2), muf=c(minDistMu, minDistMu2), printPhat=printPhat)[1]
     
-    condDistnWrong2 = condMeanMVN(SigmaAA=SigmaAAWrong2, SigmaAB=SigmaABWrong2, SigmaBB=SigmaBBWrong2, 
-                                  ysB=trainYs, getFullCov=FALSE, getCondVar=TRUE)
-    muAcondBWrong2 = condDistnWrong2$muAcondB
-    varAcondBWrong2 = condDistnWrong2$varAcondB
+    # 10. Calculate IS-CV CRPS ----
+    cellArea = 1/(nx*ny)
+    LOOISrates = (sampleProbs[sampleI]/sum(sampleProbs)) / cellArea # convert from areal rate to rate density
+    # KFoldISCV = weighted.mean(KFoldCVs[,i], w=cellArea/KFoldISrates)
+    KFoldISCV[i] = sum(KFoldCVs[,i] * (1/LOOISrates))/n1
+    KFoldISCVWrong1[i] = sum(KFoldCVsWrong1[,i] * (1/LOOISrates))/n1
+    KFoldISCVWrong2[i] = sum(KFoldCVsWrong2[,i] * (1/LOOISrates))/n1
     
-    # calculate MSE for the grid cell
-    LOOCVs[i] = crps(truth=testYs, est=muAcondB, my.var=varAcondB)
-    LOOCVsWrong1[i] = crps(truth=testYs, est=muAcondBWrong1, my.var=varAcondBWrong1)
-    LOOCVsWrong2[i] = crps(truth=testYs, est=muAcondBWrong2, my.var=varAcondBWrong2)
+    # estimate ratio of CRPSs
+    out = getP(KFoldCVs[,i], 1/LOOISrates)
+    p = out$p
+    KFoldISPCV[i] = sum(KFoldCVs[,i] * (1/LOOISrates^p))/sum(1/LOOISrates^p)
+    KFoldISPCVWrong1[i] = sum(KFoldCVsWrong1[,i] * (1/LOOISrates^p))/sum(1/LOOISrates^p)
+    KFoldISPCVWrong2[i] = sum(KFoldCVsWrong2[,i] * (1/LOOISrates^p))/sum(1/LOOISrates^p)
+    
+    KFoldISRCV[i] = getWeightedControlVarEst(Ys=KFoldCVs[,i], Zf=minDists, muf=minDistMu, Zg=1/LOOISrates, mug=1, ws=1/LOOISrates, printPhat=printPhat)[1]
+    KFoldISRCVWrong1[i] = getWeightedControlVarEst(Ys=KFoldCVsWrong1[,i], Zf=minDists, muf=minDistMu, Zg=1/LOOISrates, mug=1, ws=1/LOOISrates, printPhat=printPhat)[1]
+    KFoldISRCVWrong2[i] = getWeightedControlVarEst(Ys=KFoldCVsWrong2[,i], Zf=minDists, muf=minDistMu, Zg=1/LOOISrates, mug=1, ws=1/LOOISrates, printPhat=printPhat)[1]
+    
+    KFoldISR2CV[i] = getWeightedControlVarEst(Ys=KFoldCVs[,i], Zf=cbind(minDists, minDists2), muf=c(minDistMu, minDistMu2), Zg=cbind(1/LOOISrates), mug=c(1), ws=1/LOOISrates, printPhat=printPhat)[1]
+    KFoldISR2CVWrong1[i] = getWeightedControlVarEst(Ys=KFoldCVsWrong1[,i], Zf=cbind(minDists, minDists2), muf=c(minDistMu, minDistMu2), Zg=cbind(1/LOOISrates), mug=c(1), ws=1/LOOISrates, printPhat=printPhat)[1]
+    KFoldISR2CVWrong2[i] = getWeightedControlVarEst(Ys=KFoldCVsWrong2[,i], Zf=cbind(minDists, minDists2), muf=c(minDistMu, minDistMu2), Zg=cbind(1/LOOISrates), mug=c(1), ws=1/LOOISrates, printPhat=printPhat)[1]
+    
+    KFoldISPRCV[i] = getWeightedControlVarEst(Ys=KFoldCVs[,i], Zf=minDists, muf=minDistMu, Zg=1/LOOISrates, mug=1, ws=1/LOOISrates, shrinkWeights=TRUE, printPhat=printPhat)[1]
+    KFoldISPRCVWrong1[i] = getWeightedControlVarEst(Ys=KFoldCVsWrong1[,i], Zf=minDists, muf=minDistMu, Zg=1/LOOISrates, mug=1, ws=1/LOOISrates, shrinkWeights=TRUE, printPhat=printPhat)[1]
+    KFoldISPRCVWrong2[i] = getWeightedControlVarEst(Ys=KFoldCVsWrong2[,i], Zf=minDists, muf=minDistMu, Zg=1/LOOISrates, mug=1, ws=1/LOOISrates, shrinkWeights=TRUE, printPhat=printPhat)[1]
+    
+    KFoldISPR2CV[i] = getWeightedControlVarEst(Ys=KFoldCVs[,i], Zf=c(minDists, minDists2), muf=c(minDistMu, minDistMu2), Zg=c(1/LOOISrates), mug=c(1), ws=1/LOOISrates, shrinkWeights=TRUE, printPhat=printPhat)[1]
+    KFoldISPR2CVWrong1[i] = getWeightedControlVarEst(Ys=KFoldCVsWrong1[,i], Zf=cbind(minDists, minDists2), muf=c(minDistMu, minDistMu2), Zg=c(1/LOOISrates), mug=c(1), ws=1/LOOISrates, shrinkWeights=TRUE, printPhat=printPhat)[1]
+    KFoldISPR2CVWrong2[i] = getWeightedControlVarEst(Ys=KFoldCVsWrong2[,i], Zf=cbind(minDists, minDists2), muf=c(minDistMu, minDistMu2), Zg=c(1/LOOISrates), mug=c(1), ws=1/LOOISrates, shrinkWeights=TRUE, printPhat=printPhat)[1]
+    
+    # cors1IS = cor(1/LOOISrates, KFoldCVs[,i]/LOOISrates)
+    
+    # 11. Calculate K fold VC-CV MSE ----
+    domainPoly = rbind(c(0, 0), 
+                       c(0, 1), 
+                       c(1, 1), 
+                       c(1, 0), 
+                       c(0, 0))
+    vcellInfo = getVCellAreas(xs, domainPoly=domainPoly)
+    vcellArea = vcellInfo$area
+    rateEsts = 1/vcellArea
+    rateEsts = rateEsts/n1 # divide by n to get rate for a single pt draw instead of n pts
+    
+    KFoldVCCV[i] = sum(KFoldCVs[,i] * (1/rateEsts))/n1
+    KFoldVCCVWrong1[i] = sum(KFoldCVsWrong1[,i] * (1/rateEsts))/n1
+    KFoldVCCVWrong2[i] = sum(KFoldCVsWrong2[,i] * (1/rateEsts))/n1
+    
+    # I would add 1/rateEsts as an argument Zg with mug=1, but sum(1/rateEsts) == 1 for VC rate estimation
+    KFoldVCRCV[i] = getWeightedControlVarEst(Ys=KFoldCVs[,i], Zf=c(minDists), muf=c(minDistMu), ws=1/rateEsts, shrinkWeights=FALSE, printPhat=printPhat)[1]
+    KFoldVCRCVWrong1[i] = getWeightedControlVarEst(Ys=KFoldCVsWrong1[,i], Zf=c(minDists), muf=c(minDistMu), ws=1/rateEsts, shrinkWeights=FALSE, printPhat=printPhat)[1]
+    KFoldVCRCVWrong2[i] = getWeightedControlVarEst(Ys=KFoldCVsWrong2[,i], Zf=c(minDists), muf=c(minDistMu), ws=1/rateEsts, shrinkWeights=FALSE, printPhat=printPhat)[1]
+    
+    KFoldVCR2CV[i] = getWeightedControlVarEst(Ys=KFoldCVs[,i], Zf=cbind(minDists, minDists2), muf=c(minDistMu, minDistMu2), ws=1/rateEsts, shrinkWeights=FALSE, printPhat=printPhat)[1]
+    KFoldVCR2CVWrong1[i] = getWeightedControlVarEst(Ys=KFoldCVsWrong1[,i], Zf=cbind(minDists, minDists2), muf=c(minDistMu, minDistMu2), ws=1/rateEsts, shrinkWeights=FALSE, printPhat=printPhat)[1]
+    KFoldVCR2CVWrong2[i] = getWeightedControlVarEst(Ys=KFoldCVsWrong2[,i], Zf=cbind(minDists, minDists2), muf=c(minDistMu, minDistMu2), ws=1/rateEsts, shrinkWeights=FALSE, printPhat=printPhat)[1]
   }
-  LOOCV = mean(LOOCVs)
-  LOOCVWrong1 = mean(LOOCVsWrong1)
-  LOOCVWrong2 = mean(LOOCVsWrong2)
   
-  # get control variates
-  minDistsGrid = apply(distLocsToXs, 1, min)
-  minDistMu = mean(minDistsGrid)
-  minDistsGrid2 = apply(distLocsToXs, 1, function(x) {sort(x)[2]})
-  minDistMu2 = mean(minDistsGrid2)
-  minDists = apply(distXsToXs, 1, function(x) {min(x[x != 0])}) # distance to nearest neighbor
-  minDists2 = apply(distXsToXs, 1, function(x) {sort(x[x != 0])[2]}) # distance to second nearest neighbor
+  if(doLOO) {
+    # 9. get LOO-CV CRPS ----
+    LOOCVs = numeric(n1)
+    LOOCVsWrong1 = numeric(n1)
+    LOOCVsWrong2 = numeric(n1)
+    for(i in 1:n1) {
+      if(printProgress) {
+        print(paste0("Leaving out obs ", i, "/", n1))
+      }
+      
+      # separate data in test/train
+      isTest = (1:(n1)) == i
+      testYs = ys[isTest]
+      trainYs = ys[!isTest]
+      
+      # predict test data
+      SigmaAB = matrix(SigmaSample[isTest, !isTest], nrow=1)
+      SigmaBB = SigmaSample[!isTest, !isTest]
+      SigmaAA = SigmaSample[isTest, isTest]
+      
+      SigmaABWrong1 = matrix(SigmaSampleWrong1[isTest, !isTest], nrow=1)
+      SigmaBBWrong1 = SigmaSampleWrong1[!isTest, !isTest]
+      SigmaAAWrong1 = SigmaSampleWrong1[isTest, isTest]
+      
+      SigmaABWrong2 = matrix(SigmaSampleWrong2[isTest, !isTest], nrow=1)
+      SigmaBBWrong2 = SigmaSampleWrong2[!isTest, !isTest]
+      SigmaAAWrong2 = SigmaSampleWrong2[isTest, isTest]
+      
+      condDistn = condMeanMVN(SigmaAA=SigmaAA, SigmaAB=SigmaAB, SigmaBB=SigmaBB, 
+                              ysB=trainYs, getFullCov=FALSE, getCondVar=TRUE)
+      muAcondB = condDistn$muAcondB
+      varAcondB = condDistn$varAcondB
+      
+      condDistnWrong1 = condMeanMVN(SigmaAA=SigmaAAWrong1, SigmaAB=SigmaABWrong1, SigmaBB=SigmaBBWrong1, 
+                                    ysB=trainYs, getFullCov=FALSE, getCondVar=TRUE)
+      muAcondBWrong1 = condDistnWrong1$muAcondB
+      varAcondBWrong1 = condDistnWrong1$varAcondB
+      
+      condDistnWrong2 = condMeanMVN(SigmaAA=SigmaAAWrong2, SigmaAB=SigmaABWrong2, SigmaBB=SigmaBBWrong2, 
+                                    ysB=trainYs, getFullCov=FALSE, getCondVar=TRUE)
+      muAcondBWrong2 = condDistnWrong2$muAcondB
+      varAcondBWrong2 = condDistnWrong2$varAcondB
+      
+      # calculate MSE for the grid cell
+      LOOCVs[i] = crps(truth=testYs, est=muAcondB, my.var=varAcondB)
+      LOOCVsWrong1[i] = crps(truth=testYs, est=muAcondBWrong1, my.var=varAcondBWrong1)
+      LOOCVsWrong2[i] = crps(truth=testYs, est=muAcondBWrong2, my.var=varAcondBWrong2)
+    }
+    LOOCV = mean(LOOCVs)
+    LOOCVWrong1 = mean(LOOCVsWrong1)
+    LOOCVWrong2 = mean(LOOCVsWrong2)
+    
+    # get control variates
+    minDistsGrid = apply(distLocsToXs, 1, min)
+    minDistMu = mean(minDistsGrid)
+    minDistsGrid2 = apply(distLocsToXs, 1, function(x) {sort(x)[2]})
+    minDistMu2 = mean(minDistsGrid2)
+    minDists = apply(distMatXs, 1, function(x) {min(x[x != 0])}) # distance to nearest neighbor
+    minDists2 = apply(distMatXs, 1, function(x) {sort(x[x != 0])[2]}) # distance to second nearest neighbor
+    
+    LOORCV = getWeightedControlVarEst(Ys=LOOCVs, Zf=minDists, muf=minDistMu, printPhat=printPhat)[1]
+    LOORCVWrong1 = getWeightedControlVarEst(Ys=LOOCVsWrong1, Zf=minDists, muf=minDistMu, printPhat=printPhat)[1]
+    LOORCVWrong2 = getWeightedControlVarEst(Ys=LOOCVsWrong2, Zf=minDists, muf=minDistMu, printPhat=printPhat)[1]
+    
+    LOOR2CV = getWeightedControlVarEst(Ys=LOOCVs, Zf=cbind(minDists, minDists2), muf=c(minDistMu, minDistMu2), printPhat=printPhat)[1]
+    LOOR2CVWrong1 = getWeightedControlVarEst(Ys=LOOCVsWrong1, Zf=cbind(minDists, minDists2), muf=c(minDistMu, minDistMu2), printPhat=printPhat)[1]
+    LOOR2CVWrong2 = getWeightedControlVarEst(Ys=LOOCVsWrong2, Zf=cbind(minDists, minDists2), muf=c(minDistMu, minDistMu2), printPhat=printPhat)[1]
+    
+    # 10. Calculate LOOIS-CV CRPS ----
+    cellArea = 1/(nx*ny)
+    LOOISrates = (sampleProbs[sampleI]/sum(sampleProbs)) / cellArea # convert from areal rate to rate density
+    # LOOISCV = weighted.mean(LOOCVs, w=cellArea/LOOISrates)
+    LOOISCV = sum(LOOCVs * (1/LOOISrates))/n1
+    LOOISCVWrong1 = sum(LOOCVsWrong1 * (1/LOOISrates))/n1
+    LOOISCVWrong2 = sum(LOOCVsWrong2 * (1/LOOISrates))/n1
+    
+    # estimate ratio of MSEs
+    out = getP(LOOCVs, 1/LOOISrates)
+    p = out$p
+    LOOISPCV = sum(LOOCVs * (1/LOOISrates^p))/sum(1/LOOISrates^p)
+    LOOISPCVWrong1 = sum(LOOCVsWrong1 * (1/LOOISrates^p))/sum(1/LOOISrates^p)
+    LOOISPCVWrong2 = sum(LOOCVsWrong2 * (1/LOOISrates^p))/sum(1/LOOISrates^p)
+    
+    LOOISRCV = getWeightedControlVarEst(Ys=LOOCVs, Zf=minDists, muf=minDistMu, Zg=1/LOOISrates, mug=1, ws=1/LOOISrates, printPhat=printPhat)[1]
+    LOOISRCVWrong1 = getWeightedControlVarEst(Ys=LOOCVsWrong1, Zf=minDists, muf=minDistMu, Zg=1/LOOISrates, mug=1, ws=1/LOOISrates, printPhat=printPhat)[1]
+    LOOISRCVWrong2 = getWeightedControlVarEst(Ys=LOOCVsWrong2, Zf=minDists, muf=minDistMu, Zg=1/LOOISrates, mug=1, ws=1/LOOISrates, printPhat=printPhat)[1]
+    
+    LOOISR2CV = getWeightedControlVarEst(Ys=LOOCVs, Zf=cbind(minDists, minDists2), muf=c(minDistMu, minDistMu2), Zg=cbind(1/LOOISrates), mug=c(1), ws=1/LOOISrates, printPhat=printPhat)[1]
+    LOOISR2CVWrong1 = getWeightedControlVarEst(Ys=LOOCVsWrong1, Zf=cbind(minDists, minDists2), muf=c(minDistMu, minDistMu2), Zg=cbind(1/LOOISrates), mug=c(1), ws=1/LOOISrates, printPhat=printPhat)[1]
+    LOOISR2CVWrong2 = getWeightedControlVarEst(Ys=LOOCVsWrong2, Zf=cbind(minDists, minDists2), muf=c(minDistMu, minDistMu2), Zg=cbind(1/LOOISrates), mug=c(1), ws=1/LOOISrates, printPhat=printPhat)[1]
+    
+    LOOISPRCV = getWeightedControlVarEst(Ys=LOOCVs, Zf=minDists, muf=minDistMu, Zg=1/LOOISrates, mug=1, ws=1/LOOISrates, shrinkWeights=TRUE, printPhat=printPhat)[1]
+    LOOISPRCVWrong1 = getWeightedControlVarEst(Ys=LOOCVsWrong1, Zf=minDists, muf=minDistMu, Zg=1/LOOISrates, mug=1, ws=1/LOOISrates, shrinkWeights=TRUE, printPhat=printPhat)[1]
+    LOOISPRCVWrong2 = getWeightedControlVarEst(Ys=LOOCVsWrong2, Zf=minDists, muf=minDistMu, Zg=1/LOOISrates, mug=1, ws=1/LOOISrates, shrinkWeights=TRUE, printPhat=printPhat)[1]
+    
+    LOOISPR2CV = getWeightedControlVarEst(Ys=LOOCVs, Zf=c(minDists), muf=c(minDistMu), Zg=c(1/LOOISrates), mug=c(1), ws=1/LOOISrates, shrinkWeights=TRUE, printPhat=printPhat)[1]
+    LOOISPR2CVWrong1 = getWeightedControlVarEst(Ys=LOOCVsWrong1, Zf=cbind(minDists, minDists2), muf=c(minDistMu, minDistMu2), Zg=c(1/LOOISrates), mug=c(1), ws=1/LOOISrates, shrinkWeights=TRUE, printPhat=printPhat)[1]
+    LOOISPR2CVWrong2 = getWeightedControlVarEst(Ys=LOOCVsWrong2, Zf=cbind(minDists, minDists2), muf=c(minDistMu, minDistMu2), Zg=c(1/LOOISrates), mug=c(1), ws=1/LOOISrates, shrinkWeights=TRUE, printPhat=printPhat)[1]
+    
+    # cors1IS = cor(1/LOOISrates, LOOCVs/LOOISrates)
+    
+    # 11. Calculate LOOVC-CV CRPS ----
+    domainPoly = rbind(c(0, 0), 
+                       c(0, 1), 
+                       c(1, 1), 
+                       c(1, 0), 
+                       c(0, 0))
+    vcellInfo = getVCellAreas(xs, domainPoly=domainPoly)
+    vcellArea = vcellInfo$area
+    rateEsts = 1/vcellArea
+    rateEsts = rateEsts/n1 # divide by n to get rate for a single pt draw instead of n pts
+    
+    LOOVCCV = sum(LOOCVs * (1/rateEsts))/n1
+    LOOVCCVWrong1 = sum(LOOCVsWrong1 * (1/rateEsts))/n1
+    LOOVCCVWrong2 = sum(LOOCVsWrong2 * (1/rateEsts))/n1
+    
+    LOOVCRCV = getWeightedControlVarEst(Ys=LOOCVs, Zf=c(minDists), muf=c(minDistMu), ws=1/rateEsts, shrinkWeights=FALSE, printPhat=printPhat)[1]
+    LOOVCRCVWrong1 = getWeightedControlVarEst(Ys=LOOCVsWrong1, Zf=c(minDists), muf=c(minDistMu), ws=1/rateEsts, shrinkWeights=FALSE, printPhat=printPhat)[1]
+    LOOVCRCVWrong2 = getWeightedControlVarEst(Ys=LOOCVsWrong2, Zf=c(minDists), muf=c(minDistMu), ws=1/rateEsts, shrinkWeights=FALSE, printPhat=printPhat)[1]
+    
+    LOOVCR2CV = getWeightedControlVarEst(Ys=LOOCVs, Zf=cbind(minDists, minDists2), muf=c(minDistMu, minDistMu2), ws=1/rateEsts, shrinkWeights=FALSE, printPhat=printPhat)[1]
+    LOOVCR2CVWrong1 = getWeightedControlVarEst(Ys=LOOCVsWrong1, Zf=cbind(minDists, minDists2), muf=c(minDistMu, minDistMu2), ws=1/rateEsts, shrinkWeights=FALSE, printPhat=printPhat)[1]
+    LOOVCR2CVWrong2 = getWeightedControlVarEst(Ys=LOOCVsWrong2, Zf=cbind(minDists, minDists2), muf=c(minDistMu, minDistMu2), ws=1/rateEsts, shrinkWeights=FALSE, printPhat=printPhat)[1]
+  } else {
+    LOOCVs[i] = numeric(n1)
+    LOOCVsWrong1[i] = numeric(n1)
+    LOOCVsWrong2[i] = numeric(n1)
+    
+    LOOCV = NULL
+    LOOCVWrong1 = NULL
+    LOOCVWrong2 = NULL
+    
+    LOORCV = NULL
+    LOORCVWrong1 = NULL
+    LOORCVWrong2 = NULL
+    
+    LOOR2CV = NULL
+    LOOR2CVWrong1 = NULL
+    LOOR2CVWrong2 = NULL
+    
+    cellArea = 1/(nx*ny)
+    LOOISrates = NULL
+    LOOISCV = NULL
+    LOOISCVWrong = NULL
+    
+    LOOISPCV = NULL
+    LOOISPCVWrong1 = NULL
+    LOOISPCVWrong2 = NULL
+    
+    LOOISRCV = NULL
+    LOOISRCVWrong1 = NULL
+    LOOISRCVWrong2 = NULL
+    
+    LOOISR2CV = NULL
+    LOOISR2CVWrong1 = NULL
+    LOOISR2CVWrong2 = NULL
+    
+    LOOISPRCV = NULL
+    LOOISPRCVWrong1 = NULL
+    LOOISPRCVWrong2 = NULL
+    
+    LOOISPR2CV = NULL
+    LOOISPR2CVWrong1 = NULL
+    LOOISPR2CVWrong2 = NULL
+    
+    LOOVCCV = NULL
+    LOOVCCVWrong1 = NULL
+    LOOVCCVWrong2 = NULL
+    
+    LOOVCRCV = NULL
+    LOOVCRCVWrong1 = NULL
+    LOOVCRCVWrong2 = NULL
+    
+    LOOVCR2CV = NULL
+    LOOVCR2CVWrong1 = NULL
+    LOOVCR2CVWrong2 = NULL
+  }
   
-  # LOORCV = getRobustIWCV(scores=LOOCVs, IWs=rep(1, n1), controlVarMat=minDists1, 
-  #                        controlVarMeans=minDist1Mu, wtdReg=FALSE)
-  LOORCV = getWeightedControlVarEst(Ys=LOOCVs, Zf=minDists, muf=minDistMu)[1]
-  # LOORCVWrong = getRobustIWCV(scores=LOOCVsWrong, IWs=rep(1, n1), controlVarMat=minDists1, 
-  #                             controlVarMeans=minDist1Mu, wtdReg=FALSE)
-  LOORCVWrong1 = getWeightedControlVarEst(Ys=LOOCVsWrong1, Zf=minDists, muf=minDistMu)[1]
-  LOORCVWrong2 = getWeightedControlVarEst(Ys=LOOCVsWrong2, Zf=minDists, muf=minDistMu)[1]
-  
-  # LOOR2CV = getRobustIWCV(scores=LOOCVs, IWs=rep(1, n1), controlVarMat=cbind(minDists1, minDists2), 
-  #                        controlVarMeans=c(minDist1Mu, minDist2Mu), wtdReg=FALSE)
-  LOOR2CV = getWeightedControlVarEst(Ys=LOOCVs, Zf=cbind(minDists, minDists2), muf=c(minDist1Mu, minDist2Mu))[1]
-  # LOOR2CVWrong = getRobustIWCV(scores=LOOCVsWrong, IWs=rep(1, n1), controlVarMat=cbind(minDists1, minDists2), 
-  #                              controlVarMeans=c(minDist1Mu, minDist2Mu), wtdReg=FALSE)
-  LOOR2CVWrong = getWeightedControlVarEst(Ys=LOOCVsWrong, Zf=cbind(minDists, minDists2), muf=c(minDist1Mu, minDistMu2))[1]
-  
-  # 10. Calculate LOOIS-CV MSE ----
-  cellArea = 1/(nx*ny)
-  LOOISrates = (sampleProbs[sampleI1]/sum(sampleProbs)) / cellArea # convert from areal rate to rate density
-  # LOOISCV = weighted.mean(LOOCVs, w=cellArea/LOOISrates)
-  LOOISCV = sum(LOOCVs * (1/LOOISrates))/n1
-  LOOISCVWrong = sum(LOOCVsWrong * (1/LOOISrates))/n1
-  
-  # estimate ratio of MSEs
-  out = getP(LOOCVs, 1/LOOISrates)
-  p = out$p
-  LOOISPCV = sum(LOOCVs * (1/LOOISrates^p))/sum(1/LOOISrates^p)
-  LOOISPCVWrong1 = sum(LOOCVsWrong1 * (1/LOOISrates^p))/sum(1/LOOISrates^p)
-  LOOISPCVWrong2 = sum(LOOCVsWrong2 * (1/LOOISrates^p))/sum(1/LOOISrates^p)
-  
-  # LOOISRCV = getRobustIWCV(scores=LOOCVs, IWs=1/LOOISrates, printVarRatio=FALSE, printRoot="LOOISR", controlVarMeans=1)
-  # LOOISRCV = getRobustIWCV(scores=LOOCVs, IWs=1/LOOISrates, controlVarMat=LOOISrates, printVarRatio=FALSE, printRoot="LOOISR", controlVarMeans=1, wtdReg=TRUE)
-  # LOOISRCV = getRobustIWCV(scores=LOOCVs, IWs=1/LOOISrates, controlVarMat=minDists1, printVarRatio=FALSE, printRoot="LOOISR", controlVarMeans=minDist1Mu, wtdReg=FALSE)
-  # LOOISRCV = getGREGCV(scores=LOOCVs, IWs=1/LOOISrates, controlVarMat=cbind(1, minDists1), controlVarMeans=c(1, minDist1Mu), normalizeWeights=FALSE, 
-  #                      shrinkWeights=FALSE)
-  
-  LOOISRCV = getWeightedControlVarEst(Ys=LOOCVs, Zf=minDists, muf=minDistMu, Zg=1/LOOISrates, mug=1, ws=1/LOOISrates)[1]
-  # pGregInfo = getPGREG(LOOCVs, IWs=1/LOOISrates, controlVarMat=minDists1, controlVarMeans=minDist1Mu)
-  
-  # LOOISRCVWrong = getRobustIWCV(scores=LOOCVsWrong, IWs=1/LOOISrates, controlVarMeans=1)
-  # LOOISRCVWrong = getRobustIWCV(scores=LOOCVsWrong, IWs=1/LOOISrates, controlVarMat=LOOISrates, controlVarMeans=1, wtdReg=TRUE)
-  # LOOISRCVWrong = getRobustIWCV(scores=LOOCVsWrong, IWs=1/LOOISrates, controlVarMat=minDists1, controlVarMeans=minDist1Mu, wtdReg=FALSE)
-  # LOOISRCVWrong = getGREGCV(scores=LOOCVsWrong, IWs=1/LOOISrates, controlVarMat=cbind(1, minDists1), controlVarMeans=c(1, minDist1Mu), normalizeWeights=FALSE, 
-  #                           shrinkWeights=FALSE)
-  LOOISRCVWrong1 = getWeightedControlVarEst(Ys=LOOCVsWrong1, Zf=minDists, muf=minDistMu, Zg=1/LOOISrates, mug=1, ws=1/LOOISrates)[1]
-  LOOISRCVWrong2 = getWeightedControlVarEst(Ys=LOOCVsWrong2, Zf=minDists, muf=minDistMu, Zg=1/LOOISrates, mug=1, ws=1/LOOISrates)[1]
-  
-  LOOISR2CV = getWeightedControlVarEst(Ys=LOOCVs, Zf=cbind(minDists, minDists2), muf=c(minDisMu, minDisMu2), Zg=cbind(1/LOOISrates), mug=c(1), ws=1/LOOISrates)[1]
-  LOOISR2CVWrong1 = getWeightedControlVarEst(Ys=LOOCVsWrong1, Zf=cbind(minDists, minDists2), muf=c(minDisMu, minDisMu2), Zg=cbind(1/LOOISrates), mug=c(1), ws=1/LOOISrates)[1]
-  LOOISR2CVWrong2 = getWeightedControlVarEst(Ys=LOOCVsWrong2, Zf=cbind(minDists, minDists2), muf=c(minDisMu, minDisMu2), Zg=cbind(1/LOOISrates), mug=c(1), ws=1/LOOISrates)[1]
-  
-  LOOISPRCV = getWeightedControlVarEst(Ys=LOOCVs, Zf=minDists, muf=minDistMu, Zg=1/LOOISrates, mug=1, ws=1/LOOISrates, shrinkWeights=TRUE)[1]
-  LOOISPRCVWrong1 = getWeightedControlVarEst(Ys=LOOCVsWrong1, Zf=minDists, muf=minDistMu, Zg=1/LOOISrates, mug=1, ws=1/LOOISrates, shrinkWeights=TRUE)[1]
-  LOOISPRCVWrong2 = getWeightedControlVarEst(Ys=LOOCVsWrong2, Zf=minDists, muf=minDistMu, Zg=1/LOOISrates, mug=1, ws=1/LOOISrates, shrinkWeights=TRUE)[1]
-  LOOISPR2CV = getWeightedControlVarEst(Ys=LOOCVs, Zf=c(minDists), muf=c(minDistMu), Zg=c(1/LOOISrates, LOOISrates2/LOOISrates), mug=c(1, 1), ws=1/LOOISrates, shrinkWeights=TRUE)[1]
-  LOOISPR2CVWrong1 = getWeightedControlVarEst(Ys=LOOCVsWrong1, Zf=cbind(minDists, minDists2), muf=c(minDistMu, minDistMu2), Zg=c(1/LOOISrates), mug=c(1, 1), ws=1/LOOISrates, shrinkWeights=TRUE)[1]
-  LOOISPR2CVWrong2 = getWeightedControlVarEst(Ys=LOOCVsWrong2, Zf=cbind(minDists, minDists2), muf=c(minDistMu, minDistMu2), Zg=c(1/LOOISrates), mug=c(1, 1), ws=1/LOOISrates, shrinkWeights=TRUE)[1]
-  
-  cors1IS = cor(1/LOOISrates, LOOCVs/LOOISrates)
-  
-  # 11. Calculate LOOVC-CV MSE ----
-  domainPoly = rbind(c(0, 0), 
-                     c(0, 1), 
-                     c(1, 1), 
-                     c(1, 0), 
-                     c(0, 0))
-  vcellInfo = getVCellAreas(xs1, domainPoly=domainPoly)
-  vcellArea = vcellInfo$area
-  rateEsts = 1/vcellArea
-  rateEsts = rateEsts/n1 # divide by n to get rate for a single pt draw instead of n pts
-  
-  LOOVCCV = sum(LOOCVs * (1/rateEsts))/n1
-  LOOVCCVWrong = sum(LOOCVsWrong * (1/rateEsts))/n1
-  
-  LOOVCRCV = getWeightedControlVarEst(Ys=LOOCVs, Zf=c(minDists1), muf=c(minDist1Mu), ws=1/rateEsts, shrinkWeights=FALSE)[1]
-  LOOVCRCVWrong1 = getWeightedControlVarEst(Ys=LOOCVsWrong1, Zf=c(minDists), muf=c(minDistMu), ws=1/rateEsts, shrinkWeights=FALSE)[1]
-  LOOVCRCVWrong2 = getWeightedControlVarEst(Ys=LOOCVsWrong2, Zf=c(minDists), muf=c(minDistMu), ws=1/rateEsts, shrinkWeights=FALSE)[1]
-  
-  LOOVCR2CV = getWeightedControlVarEst(Ys=LOOCVs, Zf=cbind(minDists, minDists2), muf=c(minDistMu, minDistMu2), mug=1, ws=1/rateEsts, shrinkWeights=FALSE)[1]
-  LOOVCR2CVWrong1 = getWeightedControlVarEst(Ys=LOOCVsWrong1, Zf=cbind(minDists, minDists2), muf=c(minDistMu, minDistMu2), mug=1, ws=1/rateEsts, shrinkWeights=FALSE)[1]
-  LOOVCR2CVWrong2 = getWeightedControlVarEst(Ys=LOOCVsWrong2, Zf=cbind(minDists, minDists2), muf=c(minDistMu, minDistMu2), mug=1, ws=1/rateEsts, shrinkWeights=FALSE)[1]
-  
-  # 12. Calculate model Scores ----
+  # 12. Calculate true model Scores ----
   condDistn = condMeanMVN(SigmaAA=rep(rGRFargsTruth$sigma^2, nrow(locs)), SigmaAB=SigmaGridToSample, SigmaBB=SigmaSample, 
                           ysB=ys, getFullCov=FALSE, getCondVar=TRUE)
   muAcondB = condDistn$muAcondB
   varAcondB = condDistn$varAcondB
   condDistn = condMeanMVN(SigmaAA=rep(rGRFargsWrong1$sigma^2, nrow(locs)), SigmaAB=SigmaGridToSampleWrong1, SigmaBB=SigmaSampleWrong1, 
                           ysB=ys, getFullCov=FALSE, getCondVar=TRUE)
-  muAcondBwrong1 = condDistn$muAcondB
-  varAcondBwrong1 = condDistn$varAcondB
+  muAcondBWrong1 = condDistn$muAcondB
+  varAcondBWrong1 = condDistn$varAcondB
   condDistn = condMeanMVN(SigmaAA=rep(rGRFargsWrong2$sigma^2, nrow(locs)), SigmaAB=SigmaGridToSampleWrong2, SigmaBB=SigmaSampleWrong2, 
                           ysB=ys, getFullCov=FALSE, getCondVar=TRUE)
-  muAcondBwrong2 = condDistn$muAcondB
-  varAcondBwrong2 = condDistn$varAcondB
+  muAcondBWrong2 = condDistn$muAcondB
+  varAcondBWrong2 = condDistn$varAcondB
   
-  # calculate Scores for the grid cells
+  # calculate Scores for the grid cells (called MSE for historical reasons...)
   # trueMSE = mean((truth - muAcondB)^2) + sigmaEpsSq1
   # wrongMSE = mean((truth - muAcondBwrong)^2) + sigmaEpsSq1 # add sigmaEpsSq1, the true error variance, not sigmaEpsSq2
   trueMSE = crps(truth=truth, est=muAcondB, my.var=varAcondB + sigmaEpsSqTrue)
   wrongMSE1 = crps(truth=truth, est=muAcondBWrong1, my.var=varAcondBWrong1 + sigmaEpsSqWrong1)
   wrongMSE2 = crps(truth=truth, est=muAcondBWrong2, my.var=varAcondBWrong2 + sigmaEpsSqWrong2)
-  
-  # rGRFargsTruth=NULL, rGRFargsSample=NULL, 
-  # n=50, gridNs=2^(1:6), iter=1, seed=123, 
-  # nx=100, ny=100, sigmaEpsSq=0
   
   if(FALSE) {
     # out = estPredMSErange(sigma=1, cov.args=rGRFargsTruth$cov.args, doPlot=TRUE, 
@@ -418,9 +681,11 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
   # mean(1/sampleGRF1$truth)
   # mean(1/sampleGRF2$truth)
   trueVarW = -1 + mean(1/sampleProbs)
+  estVarWVC = mean((1/rateEsts - 1)^2)
   
   # 13. Save result ----
-  save(trueMSE, wrongMSE, LOOCVs, LOOCVsWrong1, LOOCVsWrong2, 
+  save(trueMSE, wrongMSE1, wrongMSE2, 
+       LOOCVs, LOOCVsWrong1, LOOCVsWrong2, 
        LOOCV, LOORCV, LOOR2CV, 
        LOOCVWrong1, LOORCVWrong1, LOOR2CVWrong1, 
        LOOCVWrong2, LOORCVWrong2, LOOR2CVWrong2, 
@@ -431,43 +696,74 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
        LOOISPCVWrong2, LOOISPRCVWrong2, LOOISPR2CVWrong2, 
        LOOISCVWrong2, LOOISRCVWrong2, LOOISR2CVWrong2, 
        LOOVCCV, LOOVCRCV, LOOVCR2CV, 
-       LOOCVCCV, LOOCVCRCV, LOOCVCR2CV, 
        LOOVCCVWrong1, LOOVCRCVWrong1, LOOVCR2CVWrong1, 
-       LOOCVCCVWrong1, LOOCVCRCVWrong1, LOOCVCR2CVWrong1, 
        LOOVCCVWrong2, LOOVCRCVWrong2, LOOVCR2CVWrong2, 
-       LOOCVCCVWrong2, LOOCVCRCVWrong2, LOOCVCR2CVWrong2, 
-       griddedCVs, griddedRCVs, griddedR2CVs, 
-       griddedCVsWrong1, griddedRCVsWrong1, griddedR2CVsWrong1, 
-       griddedCVsWrong2, griddedRCVsWrong2, griddedR2CVsWrong2, gridNs, 
+       
+       KFoldCVs, KFoldCVsWrong1, KFoldCVsWrong2, 
+       KFoldCV, KFoldRCV, KFoldR2CV, 
+       KFoldCVWrong1, KFoldRCVWrong1, KFoldR2CVWrong1, 
+       KFoldCVWrong2, KFoldRCVWrong2, KFoldR2CVWrong2, 
+       KFoldISCV, KFoldISRCV, KFoldISR2CV, 
+       KFoldISPCV, KFoldISPRCV, KFoldISPR2CV, 
+       KFoldISPCVWrong1, KFoldISPRCVWrong1, KFoldISPR2CVWrong1, 
+       KFoldISCVWrong1, KFoldISRCVWrong1, KFoldISR2CVWrong1, 
+       KFoldISPCVWrong2, KFoldISPRCVWrong2, KFoldISPR2CVWrong2, 
+       KFoldISCVWrong2, KFoldISRCVWrong2, KFoldISR2CVWrong2, 
+       KFoldVCCV, KFoldVCRCV, KFoldVCR2CV, 
+       KFoldVCCVWrong1, KFoldVCRCVWrong1, KFoldVCR2CVWrong1, 
+       KFoldVCCVWrong2, KFoldVCRCVWrong2, KFoldVCR2CVWrong2, 
+       
+       griddedCVs, griddedCVsWrong1, griddedCVsWrong2, gridNs, 
        iter, rGRFargsTruth, rGRFargsWrong1, rGRFargsWrong2, 
-       n1, nx, ny, propMount, propSamplesMount, 
+       n1, nx, ny, propMount, propSamplesMount, Ks, 
        sigmaEpsSqNonMount, sigmaEpsSqMount, 
        sigmaEpsSqNonMountWrong1, sigmaEpsSqMountWrong1, 
        sigmaEpsSqNonMountWrong2, sigmaEpsSqMountWrong2, 
-       allSeeds, trueVarW1, trueVarW2, 
+       allSeeds, trueVarW, estVarWVC, 
        file=paste0("savedOutput/griddedCVtestNonstatErr/n1", n1, "_pMount", propMount, "_pSMount", propSamplesMount, 
                    "_s2M", sigmaEpsSqMount, "_", sigmaEpsSqMountWrong1, "_", sigmaEpsSqMountWrong2, 
                    "_s2NM", sigmaEpsSqNonMount, "_", sigmaEpsSqNonMountWrong1, "_", sigmaEpsSqNonMountWrong2, 
                    "_iter", iter, ".RData"))
   
-  list(trueMSE=trueMSE, wrongMSE=wrongMSE, LOOCVs=LOOCVs, LOOCVsWrong=LOOCVsWrong, 
+  list(trueMSE=trueMSE, wrongMSE1=wrongMSE1, wrongMSE2=wrongMSE2, 
+       LOOCVs=LOOCVs, LOOCVsWrong1=LOOCVsWrong1, LOOCVsWrong2=LOOCVsWrong2, 
        LOOCV=LOOCV, LOORCV=LOORCV, LOORCV=LOORCV, 
-       LOOCVWrong=LOOCVWrong, LOOR2CVWrong=LOOR2CVWrong, LOOR2CVWrong=LOOR2CVWrong, 
+       LOOCVWrong1=LOOCVWrong1, LOOR2CVWrong1=LOOR2CVWrong1, LOOR2CVWrong1=LOOR2CVWrong1, 
+       LOOCVWrong2=LOOCVWrong2, LOOR2CVWrong2=LOOR2CVWrong2, LOOR2CVWrong2=LOOR2CVWrong2, 
        LOOISCV=LOOISCV, LOOISRCV=LOOISRCV, LOOISR2CV=LOOISR2CV, 
        LOOISPCV=LOOISPCV, LOOISPRCV=LOOISPRCV, LOOISPR2CV=LOOISPR2CV, 
-       LOOISPCVWrong=LOOISPCVWrong, LOOISPRCVWrong=LOOISPRCVWrong, LOOISPR2CVWrong=LOOISPR2CVWrong, 
-       LOOISCVWrong=LOOISCVWrong, LOOISRCVWrong=LOOISRCVWrong, LOOISR2CVWrong=LOOISR2CVWrong, 
+       LOOISPCVWrong1=LOOISPCVWrong1, LOOISPRCVWrong1=LOOISPRCVWrong1, LOOISPR2CVWrong1=LOOISPR2CVWrong1, 
+       LOOISCVWrong1=LOOISCVWrong1, LOOISRCVWrong1=LOOISRCVWrong1, LOOISR2CVWrong1=LOOISR2CVWrong1, 
+       LOOISPCVWrong2=LOOISPCVWrong2, LOOISPRCVWrong2=LOOISPRCVWrong2, LOOISPR2CVWrong2=LOOISPR2CVWrong2, 
+       LOOISCVWrong2=LOOISCVWrong2, LOOISRCVWrong2=LOOISRCVWrong2, LOOISR2CVWrong2=LOOISR2CVWrong2, 
        LOOVCCV=LOOVCCV, LOOVCRCV=LOOVCRCV, LOOVCR2CV=LOOVCR2CV, 
-       LOOCVCCV=LOOCVCCV, LOOCVCRCV=LOOCVCRCV, LOOCVCR2CV=LOOCVCR2CV, 
-       LOOVCCVWrong=LOOVCCVWrong, LOOVCRCVWrong=LOOVCRCVWrong, LOOVCR2CVWrong=LOOVCR2CVWrong, 
-       LOOCVCCVWrong=LOOCVCCVWrong, LOOCVCRCVWrong=LOOCVCRCVWrong, LOOCVCR2CVWrong=LOOCVCR2CVWrong, 
-       griddedCVs=griddedCVs, griddedRCVs=griddedRCVs, griddedR2CVs=griddedR2CVs, 
-       griddedCVsWrong=griddedCVsWrong, griddedRCVsWrong=griddedRCVsWrong, griddedR2CVsWrong=griddedR2CVsWrong, 
+       LOOVCCVWrong1=LOOVCCVWrong1, LOOVCRCVWrong1=LOOVCRCVWrong1, LOOVCR2CVWrong1=LOOVCR2CVWrong1, 
+       LOOVCCVWrong2=LOOVCCVWrong2, LOOVCRCVWrong2=LOOVCRCVWrong2, LOOVCR2CVWrong2=LOOVCR2CVWrong2, 
+       
+       KFoldCVs=KFoldCVs, KFoldCVsWrong1=KFoldCVsWrong1, KFoldCVsWrong2=KFoldCVsWrong2, 
+       KFoldCV=KFoldCV, KFoldRCV=KFoldRCV, KFoldRCV=KFoldRCV, 
+       KFoldCVWrong1=KFoldCVWrong1, KFoldR2CVWrong1=KFoldR2CVWrong1, KFoldR2CVWrong1=KFoldR2CVWrong1, 
+       KFoldCVWrong2=KFoldCVWrong2, KFoldR2CVWrong2=KFoldR2CVWrong2, KFoldR2CVWrong2=KFoldR2CVWrong2, 
+       KFoldISCV=KFoldISCV, KFoldISRCV=KFoldISRCV, KFoldISR2CV=KFoldISR2CV, 
+       KFoldISPCV=KFoldISPCV, KFoldISPRCV=KFoldISPRCV, KFoldISPR2CV=KFoldISPR2CV, 
+       KFoldISPCVWrong1=KFoldISPCVWrong1, KFoldISPRCVWrong1=KFoldISPRCVWrong1, KFoldISPR2CVWrong1=KFoldISPR2CVWrong1, 
+       KFoldISCVWrong1=KFoldISCVWrong1, KFoldISRCVWrong1=KFoldISRCVWrong1, KFoldISR2CVWrong1=KFoldISR2CVWrong1, 
+       KFoldISPCVWrong2=KFoldISPCVWrong2, KFoldISPRCVWrong2=KFoldISPRCVWrong2, KFoldISPR2CVWrong2=KFoldISPR2CVWrong2, 
+       KFoldISCVWrong2=KFoldISCVWrong2, KFoldISRCVWrong2=KFoldISRCVWrong2, KFoldISR2CVWrong2=KFoldISR2CVWrong2, 
+       KFoldVCCV=KFoldVCCV, KFoldVCRCV=KFoldVCRCV, KFoldVCR2CV=KFoldVCR2CV, 
+       KFoldVCCVWrong1=KFoldVCCVWrong1, KFoldVCRCVWrong1=KFoldVCRCVWrong1, KFoldVCR2CVWrong1=KFoldVCR2CVWrong1, 
+       KFoldVCCVWrong2=KFoldVCCVWrong2, KFoldVCRCVWrong2=KFoldVCRCVWrong2, KFoldVCR2CVWrong2=KFoldVCR2CVWrong2, 
+       
+       griddedCVs=griddedCVs, griddedCVsWrong1=griddedCVsWrong1, griddedCVsWrong2=griddedCVsWrong2, 
        gridNs=gridNs, iter=iter, rGRFargsTruth=rGRFargsTruth, 
-       rGRFargsSample=rGRFargsSample, rGRFargsWrong=rGRFargsWrong, 
-       n1=n1, n2=n2, nx=nx, ny=ny, rho=rho, sigmaEpsSq1=sigmaEpsSq1, 
-       sigmaEpsSq2=sigmaEpsSq2, allSeeds=allSeeds, 
-       meanIW1=meanIW1, meanIW2=meanIW2, meanCVCIW1=meanCVCIW1, meanCVCIW2=meanCVCIW2, 
-       cors1IS=cors1IS, cors2IS=cors2IS, cors1CVC=cors1CVC, cors2CVC=cors2CVC, 
-       trueVarW1=trueVarW1, trueVarW2=trueVarW2)
+       rGRFargsWrong1=rGRFargsWrong1, rGRFargsWrong2=rGRFargsWrong2, 
+       n1=n1, nx=nx, ny=ny, Ks=Ks, 
+       propMount=propMount, propSamplesMount=propSamplesMount, 
+       sigmaEpsSqNonMount=sigmaEpsSqNonMount, 
+       sigmaEpsSqMount=sigmaEpsSqMount, 
+       sigmaEpsSqNonMountWrong1=sigmaEpsSqNonMountWrong1, 
+       sigmaEpsSqMountWrong1=sigmaEpsSqMountWrong1, 
+       sigmaEpsSqNonMountWrong2=sigmaEpsSqNonMountWrong2, 
+       sigmaEpsSqMountWrong2=sigmaEpsSqMountWrong2, 
+       allSeeds=allSeeds, trueVarW=trueVarW, estVarWVC=estVarWVC)
 }
