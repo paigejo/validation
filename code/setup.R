@@ -13,7 +13,6 @@ if(FALSE) {
   install.packages("viridis")
   install.packages("sp")
   install.packages("raster")
-  install.packages("MCMCpack")
   install.packages("numDeriv")
   install.packages("INLA")
   install.packages("edfun") # for drawing from empirical distributions quickly
@@ -29,6 +28,8 @@ if(FALSE) {
   install.packages("colorspace")
   install.packages("TMB")
   install.packages("plyr")
+  install.packages("deldir")
+  install.packages("stringr")
   
   library(devtools)
   if(FALSE) {
@@ -53,7 +54,6 @@ library(geosphere)
 library(viridis)
 library(sp)
 library(raster)
-library(MCMCpack)
 library(numDeriv)
 library(INLA)
 library(edfun) # for drawing from empirical distributions quickly
