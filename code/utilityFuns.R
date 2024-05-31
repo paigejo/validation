@@ -145,3 +145,15 @@ normDataWithin <- function(data=NULL, idvar, measurevar, betweenvars=NULL,
   return(data)
 }
 
+# estimates remaining computation time in seconds before a for loop is finished
+estTimeLeft = function(startTime, currTime, finishedIter, totalIter) {
+  timeUsed = currTime - startTime
+  timePerIter = timeUsed/finishedIter
+  itersLeft = totalIter - finishedIter
+  timeLeft = timePerIter * itersLeft
+  
+  timeLeft
+}
+
+
+

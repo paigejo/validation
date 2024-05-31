@@ -307,12 +307,12 @@
 # 
 # # truth: a vector of observations on the desired scale
 # # est: a vector of logit-scale predictions of the same length as truth 
-# # my.var: a vector of logit-scale predictive variances of the same length as truth
+# # est.var: a vector of logit-scale predictive variances of the same length as truth
 # # estMat: if available, use these probability draws in the integration. Use this argument 
 # #         when a gaussian approximation to the (possibly transformed) posterior is unreasonable
-# crps <- function(truth, est=NULL, my.var=NULL, estMat=NULL, getAverage=TRUE){
-#   if(!is.null(est) && !is.null(my.var) && is.null(estMat)) {
-#     sig = sqrt(my.var)
+# crps <- function(truth, est=NULL, est.var=NULL, estMat=NULL, getAverage=TRUE){
+#   if(!is.null(est) && !is.null(est.var) && is.null(estMat)) {
+#     sig = sqrt(est.var)
 #     x0 <- (truth - est) / sig
 #     res <- sig * (1 / sqrt(pi) -  2 * dnorm(x0) - x0 * (2 * pnorm(x0) - 1))
 #     
@@ -322,7 +322,7 @@
 #   else {
 #     # Integrate numerically using estMat
 #     if(is.null(estMat))
-#       stop("must include either or both est and my.var, or estMat")
+#       stop("must include either or both est and est.var, or estMat")
 #     
 #     # the following code was commented out since it has been modified to be computationally efficient
 #     # # compute the crps for this row of truth
@@ -333,7 +333,7 @@
 #     #   # empirical distribution given by estMat if the user supplies it
 #     #   if(is.null(estMat)) {
 #     #     thisEst = est[rowI]
-#     #     thisVar = my.var[rowI]
+#     #     thisVar = est.var[rowI]
 #     #     thisCdf = function(ws) {pnorm(logit(ws), thisEst, sqrt(thisVar))}
 #     #   } else {
 #     #     thisCdf = ecdf(estMat[rowI,])
@@ -367,7 +367,7 @@
 #     #   # empirical distribution given by estMat if the user supplies it
 #     #   if(is.null(estMat)) {
 #     #     thisEst = est[rowI]
-#     #     thisVar = my.var[rowI]
+#     #     thisVar = est.var[rowI]
 #     #     thisCdf = function(ws) {pnorm(logit(ws), thisEst, sqrt(thisVar))}
 #     #   } else {
 #     #     # thisCdf = ecdf(estMat[rowI,])
@@ -963,17 +963,21 @@ coverage = function(truth, est=NULL, var=NULL, lower=NULL, upper=NULL,
   allResults
 }
 
+# For details of calculation, see strictly proper scoring rules paper by Gneiting and Raftery
 # truth: a vector of observations on the desired scale
 # est: a vector of logit-scale predictions of the same length as truth 
-# my.var: a vector of logit-scale predictive variances of the same length as truth
+# est.var: a vector of logit-scale predictive variances of the same length as truth
 # estMat: if available, use these probability draws in the integration. Use this argument 
 #         when a gaussian approximation to the (possibly transformed) posterior is unreasonable
-# getAverage: if FALSE, returns score for individual observations. Otherwise for all observations
-crps <- function(truth, est=NULL, my.var=NULL, estMat=NULL, getAverage=TRUE, na.rm=FALSE, weights=rep(1, length(truth))){
-  if(!is.null(est) && !is.null(my.var) && is.null(estMat)) {
+# getAverage: If FALSE, returns a vector of CRPS values for each value of truth. 
+#             Otherwise, returns a weighted average using weights argument.
+# na.rm: whether or not to remove NAs from the average
+# weights: if getAverage is TRUE, these are the weights used to get weighted average
+crps <- function(truth, est=NULL, est.var=NULL, estMat=NULL, getAverage=TRUE, na.rm=FALSE, weights=rep(1, length(truth))){
+  if(!is.null(est) && !is.null(est.var) && is.null(estMat)) {
     # Assume Gaussianity
     # Using formula from stricly proper scoring rules paper
-    sig = sqrt(my.var)
+    sig = sqrt(est.var)
     x0 <- (truth - est) / sig
     res <- sig * (1 / sqrt(pi) -  2 * dnorm(x0) - x0 * (2 * pnorm(x0) - 1))
     
@@ -983,7 +987,7 @@ crps <- function(truth, est=NULL, my.var=NULL, estMat=NULL, getAverage=TRUE, na.
   else {
     # Integrate numerically using estMat
     if(is.null(estMat))
-      stop("must include either or both est and my.var, or estMat")
+      stop("must include either or both est and est.var, or estMat")
     
     # the following code was commented out since it has been modified to be computationally efficient
     # # compute the crps for this row of truth
@@ -994,7 +998,7 @@ crps <- function(truth, est=NULL, my.var=NULL, estMat=NULL, getAverage=TRUE, na.
     #   # empirical distribution given by estMat if the user supplies it
     #   if(is.null(estMat)) {
     #     thisEst = est[rowI]
-    #     thisVar = my.var[rowI]
+    #     thisVar = est.var[rowI]
     #     thisCdf = function(ws) {pnorm(logit(ws), thisEst, sqrt(thisVar))}
     #   } else {
     #     thisCdf = ecdf(estMat[rowI,])
@@ -1028,7 +1032,7 @@ crps <- function(truth, est=NULL, my.var=NULL, estMat=NULL, getAverage=TRUE, na.
     #   # empirical distribution given by estMat if the user supplies it
     #   if(is.null(estMat)) {
     #     thisEst = est[rowI]
-    #     thisVar = my.var[rowI]
+    #     thisVar = est.var[rowI]
     #     thisCdf = function(ws) {pnorm(logit(ws), thisEst, sqrt(thisVar))}
     #   } else {
     #     # thisCdf = ecdf(estMat[rowI,])
@@ -1103,6 +1107,35 @@ crps <- function(truth, est=NULL, my.var=NULL, estMat=NULL, getAverage=TRUE, na.
       estMat = t(apply(estMat, 1, sortWithNAs))
     res = sapply(1:length(truth), crpsRow)
   }
+  
+  if(getAverage) {
+    weights = weights*(1/sum(weights, na.rm=TRUE))
+    sum(res*weights, na.rm=na.rm)
+  } else {
+    res
+  }
+}
+
+# calculate CRPS assuming predictive distribution and data distribution are 
+# Gaussian. Based on (11) in Leutbecher and Haiden (2020) 
+# https://rmets.onlinelibrary.wiley.com/doi/pdfdirect/10.1002/qj.3926
+# truth: a vector of observations on the desired scale
+# est: a vector of logit-scale predictions of the same length as truth 
+# est.var: a vector of logit-scale predictive variances of the same length as truth
+# getAverage: If FALSE, returns a vector of CRPS values for each value of truth. 
+#             Otherwise, returns a weighted average using weights argument.
+# na.rm: whether or not to remove NAs from the average
+# weights: if getAverage is TRUE, these are the weights used to get weighted average
+expectedCRPS = function(truth, truth.var, est, est.var, getAverage=TRUE, na.rm=FALSE, weights=rep(1, length(truth))) {
+  erf = function(x) {2*(pnorm(sqrt(2)*x) - 0.5)}
+  
+  SSS = truth.var + est.var # sigStarSq
+  b = est-truth # bias
+  
+  pt1 = sqrt(2*SSS/pi) * exp(-b^2/(2*SSS)) + b*erf(b/sqrt(2*SSS))
+  pt2 = - sqrt(est.var)/sqrt(pi)
+  
+  res = pt1 + pt2
   
   if(getAverage) {
     weights = weights*(1/sum(weights, na.rm=TRUE))

@@ -681,6 +681,10 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
   
   # generate results
   if(regenResults) {
+    # for estimating time left
+    totalIter <<- niter
+    startT <<- proc.time()[3]
+    
     if(!twoDatasets && !nonStatError) {
       totTime = system.time(results <- lapply(1:niter, griddedResTestIter, 
                                               rGRFargsTruth=rGRFargsTruth, 
@@ -772,6 +776,28 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
                         LOOVCCV=LOOVCCV, LOOVCRCV=LOOVCRCV, LOOVCR2CV=LOOVCR2CV, 
                         LOOVCCVWrong1=LOOVCCVWrong1, LOOVCRCVWrong1=LOOVCRCVWrong1, LOOVCR2CVWrong1=LOOVCR2CVWrong1, 
                         LOOVCCVWrong2=LOOVCCVWrong2, LOOVCRCVWrong2=LOOVCRCVWrong2, LOOVCR2CVWrong2=LOOVCR2CVWrong2, 
+                        LOOVCPCV=LOOVCPCV, LOOVCPRCV=LOOVCPRCV, LOOVCPR2CV=LOOVCPR2CV, 
+                        LOOVCPCVWrong1=LOOVCPCVWrong1, LOOVCPRCVWrong1=LOOVCPRCVWrong1, LOOVCPR2CVWrong1=LOOVCPR2CVWrong1, 
+                        LOOVCPCVWrong2=LOOVCPCVWrong2, LOOVCPRCVWrong2=LOOVCPRCVWrong2, LOOVCPR2CVWrong2=LOOVCPR2CVWrong2, 
+                        
+                        KFoldCVs=KFoldCVs, 
+                        KFoldCVsWrong1=KFoldCVsWrong1, KFoldCVsWrong2=KFoldCVsWrong2, 
+                        KFoldCV=KFoldCV, KFoldRCV=KFoldRCV, KFoldRCV=KFoldRCV, 
+                        KFoldCVWrong1=KFoldCVWrong1, KFoldR2CVWrong1=KFoldR2CVWrong1, KFoldR2CVWrong1=KFoldR2CVWrong1, 
+                        KFoldCVWrong2=KFoldCVWrong2, KFoldR2CVWrong2=KFoldR2CVWrong2, KFoldR2CVWrong2=KFoldR2CVWrong2, 
+                        KFoldISCV=KFoldISCV, KFoldISRCV=KFoldISRCV, KFoldISR2CV=KFoldISR2CV, 
+                        KFoldISPCV=KFoldISPCV, KFoldISPRCV=KFoldISPRCV, KFoldISPR2CV=KFoldISPR2CV, 
+                        KFoldISPCVWrong1=KFoldISPCVWrong1, KFoldISPRCVWrong1=KFoldISPRCVWrong1, KFoldISPR2CVWrong1=KFoldISPR2CVWrong1, 
+                        KFoldISCVWrong1=KFoldISCVWrong1, KFoldISRCVWrong1=KFoldISRCVWrong1, KFoldISR2CVWrong1=KFoldISR2CVWrong1, 
+                        KFoldISPCVWrong2=KFoldISPCVWrong2, KFoldISPRCVWrong2=KFoldISPRCVWrong2, KFoldISPR2CVWrong2=KFoldISPR2CVWrong2, 
+                        KFoldISCVWrong2=KFoldISCVWrong2, KFoldISRCVWrong2=KFoldISRCVWrong2, KFoldISR2CVWrong2=KFoldISR2CVWrong2, 
+                        KFoldVCCV=KFoldVCCV, KFoldVCRCV=KFoldVCRCV, KFoldVCR2CV=KFoldVCR2CV, 
+                        KFoldVCCVWrong1=KFoldVCCVWrong1, KFoldVCRCVWrong1=KFoldVCRCVWrong1, KFoldVCR2CVWrong1=KFoldVCR2CVWrong1, 
+                        KFoldVCCVWrong2=KFoldVCCVWrong2, KFoldVCRCVWrong2=KFoldVCRCVWrong2, KFoldVCR2CVWrong2=KFoldVCR2CVWrong2, 
+                        KFoldVCPCV=KFoldVCPCV, KFoldVCPRCV=KFoldVCPRCV, KFoldVCPR2CV=KFoldVCPR2CV, 
+                        KFoldVCPCVWrong1=KFoldVCPCVWrong1, KFoldVCPRCVWrong1=KFoldVCPRCVWrong1, KFoldVCPR2CVWrong1=KFoldVCPR2CVWrong1, 
+                        KFoldVCPCVWrong2=KFoldVCPCVWrong2, KFoldVCPRCVWrong2=KFoldVCPRCVWrong2, KFoldVCPR2CVWrong2=KFoldVCPR2CVWrong2, 
+                        
                         griddedCVs=griddedCVs, griddedCVsWrong1=griddedCVsWrong1, griddedCVsWrong2=griddedCVsWrong2, 
                         gridNs=gridNs, iter=iter, rGRFargsTruth=rGRFargsTruth, 
                         rGRFargsWrong1=rGRFargsWrong1, rGRFargsWrong2=rGRFargsWrong2, 
@@ -789,10 +815,15 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
       results = c(results, list(thisList))
     }
   }
+  gridNs = results[[1]]$gridNs
   
   # concatenate results
-  getName = function(x, thisName) {
-    x[[thisName]]
+  getName = function(x, thisName, ind=NULL) {
+    if(is.null(ind)) {
+      x[[thisName]]
+    } else {
+      x[[thisName]][ind]
+    }
   }
   # list(trueMSE=trueMSE, LOOCVs=LOOCVs, LOOCV=LOOCV, 
   #      griddedCVs=griddedCVs, gridNs=gridNs, 
@@ -814,928 +845,1060 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
   wrongMSEs = sapply(results, getName, thisName="wrongMSE")
   wrongMSEs1 = sapply(results, getName, thisName="wrongMSE1")
   wrongMSEs2 = sapply(results, getName, thisName="wrongMSE2")
-  LOOCVs = sapply(results, getName, thisName="LOOCV")
-  LOOISCVs = sapply(results, getName, thisName="LOOISCV")
-  LOOVCCVs = sapply(results, getName, thisName="LOOVCCV")
+  errsWrong12 = wrongMSEs1 - wrongMSEs2
+  
   griddedCVs = sapply(results, getName, thisName="griddedCVs")
-  
-  LOOCVsWrong1 = sapply(results, getName, thisName="LOOCVWrong1")
-  LOOISCVsWrong1 = sapply(results, getName, thisName="LOOISCVWrong1")
-  LOOVCCVsWrong1 = sapply(results, getName, thisName="LOOVCCVWrong1")
   griddedCVsWrong1 = sapply(results, getName, thisName="griddedCVsWrong1")
-  
-  LOOCVsWrong2 = sapply(results, getName, thisName="LOOCVWrong2")
-  LOOISCVsWrong2 = sapply(results, getName, thisName="LOOISCVWrong2")
-  LOOVCCVsWrong2 = sapply(results, getName, thisName="LOOVCCVWrong2")
   griddedCVsWrong2 = sapply(results, getName, thisName="griddedCVsWrong2")
-  
-  LOORCVs = sapply(results, getName, thisName="LOORCV")
-  LOOISRCVs = sapply(results, getName, thisName="LOOISRCV")
-  LOOVCRCVs = sapply(results, getName, thisName="LOOVCRCV")
   griddedRCVs = sapply(results, getName, thisName="griddedRCVs")
-  LOOISRCVsWrong1 = sapply(results, getName, thisName="LOOISRCVWrong1")
-  LOOVCRCVsWrong1 = sapply(results, getName, thisName="LOOVCRCVWrong1")
   griddedRCVsWrong1 = sapply(results, getName, thisName="griddedRCVsWrong1")
-  LOOISRCVsWrong2 = sapply(results, getName, thisName="LOOISRCVWrong2")
-  LOOVCRCVsWrong2 = sapply(results, getName, thisName="LOOVCRCVWrong2")
   griddedRCVsWrong2 = sapply(results, getName, thisName="griddedRCVsWrong2")
-  
-  LOOR2CVs = sapply(results, getName, thisName="LOOR2CV")
-  LOOISR2CVs = sapply(results, getName, thisName="LOOISR2CV")
-  LOOVCR2CVs = sapply(results, getName, thisName="LOOVCR2CV")
   griddedR2CVs = sapply(results, getName, thisName="griddedR2CVs")
-  LOOISR2CVsWrong1 = sapply(results, getName, thisName="LOOISR2CVWrong1")
-  LOOVCR2CVsWrong1 = sapply(results, getName, thisName="LOOVCR2CVWrong1")
   griddedR2CVsWrong1 = sapply(results, getName, thisName="griddedR2CVsWrong1")
-  LOOISR2CVsWrong2 = sapply(results, getName, thisName="LOOISR2CVWrong2")
-  LOOVCR2CVsWrong2 = sapply(results, getName, thisName="LOOVCR2CVWrong2")
   griddedR2CVsWrong2 = sapply(results, getName, thisName="griddedR2CVsWrong2")
   
-  LOOISPCVs = sapply(results, getName, thisName="LOOISPCV")
-  LOOISPRCVs = sapply(results, getName, thisName="LOOISPRCV")
-  LOOISPR2CVs = sapply(results, getName, thisName="LOOISPR2CV")
-  LOOISPCVsWrong1 = sapply(results, getName, thisName="LOOISPCVWrong1")
-  LOOISPRCVsWrong1 = sapply(results, getName, thisName="LOOISPRCVWrong1")
-  LOOISPR2CVsWrong1 = sapply(results, getName, thisName="LOOISPR2CVWrong1")
-  LOOISPCVsWrong2 = sapply(results, getName, thisName="LOOISPCVWrong2")
-  LOOISPRCVsWrong2 = sapply(results, getName, thisName="LOOISPRCVWrong2")
-  LOOISPR2CVsWrong2 = sapply(results, getName, thisName="LOOISPR2CVWrong2")
+  # LOOCVs = sapply(results, getName, thisName="LOOCV")
+  # LOOISCVs = sapply(results, getName, thisName="LOOISCV")
+  # LOOVCCVs = sapply(results, getName, thisName="LOOVCCV")
+  # 
+  # LOOCVsWrong1 = sapply(results, getName, thisName="LOOCVWrong1")
+  # LOOISCVsWrong1 = sapply(results, getName, thisName="LOOISCVWrong1")
+  # LOOVCCVsWrong1 = sapply(results, getName, thisName="LOOVCCVWrong1")
+  # 
+  # LOOCVsWrong2 = sapply(results, getName, thisName="LOOCVWrong2")
+  # LOOISCVsWrong2 = sapply(results, getName, thisName="LOOISCVWrong2")
+  # LOOVCCVsWrong2 = sapply(results, getName, thisName="LOOVCCVWrong2")
+  # 
+  # LOORCVs = sapply(results, getName, thisName="LOORCV")
+  # LOOISRCVs = sapply(results, getName, thisName="LOOISRCV")
+  # LOOVCRCVs = sapply(results, getName, thisName="LOOVCRCV")
+  # 
+  # LOOISRCVsWrong1 = sapply(results, getName, thisName="LOOISRCVWrong1")
+  # LOOVCRCVsWrong1 = sapply(results, getName, thisName="LOOVCRCVWrong1")
+  # LOOISRCVsWrong2 = sapply(results, getName, thisName="LOOISRCVWrong2")
+  # LOOVCRCVsWrong2 = sapply(results, getName, thisName="LOOVCRCVWrong2")
+  # 
+  # LOOR2CVs = sapply(results, getName, thisName="LOOR2CV")
+  # LOOISR2CVs = sapply(results, getName, thisName="LOOISR2CV")
+  # LOOVCR2CVs = sapply(results, getName, thisName="LOOVCR2CV")
+  # 
+  # LOOISR2CVsWrong1 = sapply(results, getName, thisName="LOOISR2CVWrong1")
+  # LOOVCR2CVsWrong1 = sapply(results, getName, thisName="LOOVCR2CVWrong1")
+  # LOOISR2CVsWrong2 = sapply(results, getName, thisName="LOOISR2CVWrong2")
+  # LOOVCR2CVsWrong2 = sapply(results, getName, thisName="LOOVCR2CVWrong2")
+  # 
+  # 
+  # LOOISPCVs = sapply(results, getName, thisName="LOOISPCV")
+  # LOOISPRCVs = sapply(results, getName, thisName="LOOISPRCV")
+  # LOOISPR2CVs = sapply(results, getName, thisName="LOOISPR2CV")
+  # LOOISPCVsWrong1 = sapply(results, getName, thisName="LOOISPCVWrong1")
+  # LOOISPRCVsWrong1 = sapply(results, getName, thisName="LOOISPRCVWrong1")
+  # LOOISPR2CVsWrong1 = sapply(results, getName, thisName="LOOISPR2CVWrong1")
+  # LOOISPCVsWrong2 = sapply(results, getName, thisName="LOOISPCVWrong2")
+  # LOOISPRCVsWrong2 = sapply(results, getName, thisName="LOOISPRCVWrong2")
+  # LOOISPR2CVsWrong2 = sapply(results, getName, thisName="LOOISPR2CVWrong2")
+  # 
+  # LOOVCPCVs = sapply(results, getName, thisName="LOOVCPCV")
+  # LOOVCPRCVs = sapply(results, getName, thisName="LOOVCPRCV")
+  # LOOVCPR2CVs = sapply(results, getName, thisName="LOOVCPR2CV")
+  # LOOVCPCVsWrong1 = sapply(results, getName, thisName="LOOVCPCVWrong1")
+  # LOOVCPRCVsWrong1 = sapply(results, getName, thisName="LOOVCPRCVWrong1")
+  # LOOVCPR2CVsWrong1 = sapply(results, getName, thisName="LOOVCPR2CVWrong1")
+  # LOOVCPCVsWrong2 = sapply(results, getName, thisName="LOOVCPCVWrong2")
+  # LOOVCPRCVsWrong2 = sapply(results, getName, thisName="LOOVCPRCVWrong2")
+  # LOOVCPR2CVsWrong2 = sapply(results, getName, thisName="LOOVCPR2CVWrong2")
   
   # calculate error
-  LOOCVerrs = LOOCVs - trueMSEs
-  LOOISCVerrs = LOOISCVs - trueMSEs
-  LOOVCCVerrs = LOOVCCVs - trueMSEs
   griddedCVerrs = sweep(griddedCVs, 2, trueMSEs)
   griddedCVmeanErr = rowMeans(griddedCVerrs)
-  LOOISRCVerrs = LOOISRCVs - trueMSEs
-  LOOVCRCVerrs = LOOVCRCVs - trueMSEs
   # griddedRCVerrs = sweep(griddedRCVs, 2, trueMSEs)
-  LOOISR2CVerrs = LOOISR2CVs - trueMSEs
-  LOOVCR2CVerrs = LOOVCR2CVs - trueMSEs
   # griddedR2CVerrs = sweep(griddedR2CVs, 2, trueMSEs)
   
-  LOOISPCVerrs = LOOISPCVs - trueMSEs
-  LOOISPRCVerrs = LOOISPRCVs - trueMSEs
-  LOOISPR2CVerrs = LOOISPR2CVs - trueMSEs
-  
-  LOOCVerrsWrong1 = LOOCVsWrong1 - wrongMSEs1
-  LOOISCVerrsWrong1 = LOOISCVsWrong1 - wrongMSEs1
-  LOOVCCVerrsWrong1 = LOOVCCVsWrong1 - wrongMSEs1
   griddedCVerrsWrong1 = sweep(griddedCVsWrong1, 2, wrongMSEs1)
   griddedCVmeanErrWrong1 = rowMeans(griddedCVerrsWrong1)
-  LOOISRCVerrsWrong1 = LOOISRCVsWrong1 - wrongMSEs1
-  LOOVCRCVerrsWrong1 = LOOVCRCVsWrong1 - wrongMSEs1
   # griddedRCVerrsWrong1 = sweep(griddedRCVs, 2, wrongMSEs1)
-  LOOISR2CVerrsWrong1 = LOOISR2CVsWrong1 - wrongMSEs1
-  LOOVCR2CVerrsWrong1 = LOOVCR2CVsWrong1 - wrongMSEs1
   # griddedR2CVerrsWrong1 = sweep(griddedR2CVs, 2, wrongMSEs1)
   
-  LOOISPCVerrsWrong1 = LOOISPCVsWrong1 - wrongMSEs1
-  LOOISPRCVerrsWrong1 = LOOISPRCVsWrong1 - wrongMSEs1
-  LOOISPR2CVerrsWrong1 = LOOISPR2CVsWrong1 - wrongMSEs1
-  
-  LOOCVerrsWrong2 = LOOCVsWrong2 - wrongMSEs2
-  LOOISCVerrsWrong2 = LOOISCVsWrong2 - wrongMSEs2
-  LOOVCCVerrsWrong2 = LOOVCCVsWrong2 - wrongMSEs2
   griddedCVerrsWrong2 = sweep(griddedCVsWrong2, 2, wrongMSEs2)
   griddedCVmeanErrWrong2 = rowMeans(griddedCVerrsWrong2)
-  LOOISRCVerrsWrong2 = LOOISRCVsWrong2 - wrongMSEs2
-  LOOVCRCVerrsWrong2 = LOOVCRCVsWrong2 - wrongMSEs2
   # griddedRCVerrsWrong2 = sweep(griddedRCVs, 2, wrongMSEs2)
-  LOOISR2CVerrsWrong2 = LOOISR2CVsWrong2 - wrongMSEs2
-  LOOVCR2CVerrsWrong2 = LOOVCR2CVsWrong2 - wrongMSEs2
   # griddedR2CVerrsWrong2 = sweep(griddedR2CVs, 2, wrongMSEs2)
-  
-  LOOISPCVerrsWrong2 = LOOISPCVsWrong2 - wrongMSEs2
-  LOOISPRCVerrsWrong2 = LOOISPRCVsWrong2 - wrongMSEs2
-  LOOISPR2CVerrsWrong2 = LOOISPR2CVsWrong2 - wrongMSEs2
-  
-  errsWrong12 = wrongMSEs1 - wrongMSEs2
-  LOOCVerrsWrong12 = LOOCVsWrong1 - LOOCVsWrong2 - errsWrong12
-  LOOISCVerrsWrong12 = LOOISCVsWrong1 - LOOISCVsWrong2 - errsWrong12
-  LOOVCCVerrsWrong12 = LOOVCCVsWrong1 - LOOVCCVsWrong2 - errsWrong12
   griddedCVerrsWrong12 = sweep(griddedCVsWrong1 - griddedCVsWrong2, 2, errsWrong12)
   griddedCVmeanErrWrong12 = rowMeans(griddedCVerrsWrong12)
-  LOOISRCVerrsWrong12 = LOOISRCVsWrong1 - LOOISRCVsWrong2 - errsWrong12
-  LOOVCRCVerrsWrong12 = LOOVCRCVsWrong1 - LOOVCRCVsWrong2 - errsWrong12
   # griddedRCVerrsWrong12 = sweep(griddedRCVsWrong12, 2, errsWrong12)
-  LOOISR2CVerrsWrong12 = LOOISR2CVsWrong1 - LOOISR2CVsWrong2 - errsWrong12
-  LOOVCR2CVerrsWrong12 = LOOVCR2CVsWrong1 - LOOVCR2CVsWrong2 - errsWrong12
   # griddedR2CVerrsWrong12 = sweep(griddedR2CVsWrong12, 2, errsWrong12)
-
-  LOOISPCVerrsWrong12 = LOOISPCVsWrong1 - LOOISPCVsWrong2 - errsWrong12
-  LOOISPRCVerrsWrong12 = LOOISPRCVsWrong1 - LOOISPRCVsWrong2 - errsWrong12
-  LOOISPR2CVerrsWrong12 = LOOISPR2CVsWrong1 - LOOISPR2CVsWrong2 - errsWrong12
   
-  # calculate percent error
-  LOOCVpctErrs = 100 * LOOCVerrs/trueMSEs
-  LOOISCVpctErrs = 100 * LOOISCVerrs/trueMSEs
-  LOOVCCVpctErrs = 100 * LOOVCCVerrs/trueMSEs
   griddedCVpctErrs = sweep(griddedCVerrs, 2, 100/trueMSEs, "*")
   griddedCVmeanPctErr = rowMeans(griddedCVpctErrs)
-  LOOISRCVpctErrs = 100 * LOOISRCVerrs/trueMSEs
   # griddedRCVpctErrs = sweep(griddedRCVerrs, 2, 100/trueMSEs, "*")
-  LOOISR2CVpctErrs = 100 * LOOISR2CVerrs/trueMSEs
   # griddedR2CVpctErrs = sweep(griddedR2CVerrs, 2, 100/trueMSEs, "*")
   
-  LOOCVpctErrsWrong1 = 100 * LOOCVerrsWrong1/wrongMSEs1
-  LOOISCVpctErrsWrong1 = 100 * LOOISCVerrsWrong1/wrongMSEs1
-  LOOVCCVpctErrsWrong1 = 100 * LOOVCCVerrsWrong1/wrongMSEs1
   griddedCVpctErrsWrong1 = sweep(griddedCVerrsWrong1, 2, 100/wrongMSEs1, "*")
   griddedCVmeanPctErrWrong1 = rowMeans(griddedCVpctErrsWrong1)
-  LOOISRCVpctErrsWrong1 = 100 * LOOISRCVerrs/wrongMSEs1
   # griddedRCVpctErrsWrong1 = sweep(griddedRCVerrsWrong1, 2, 100/wrongMSEs1, "*")
-  LOOISR2CVpctErrsWrong1 = 100 * LOOISR2CVerrsWrong1/wrongMSEs1
   # griddedR2CVpctErrsWrong1 = sweep(griddedR2CVerrsWrong1, 2, 100/wrongMSEs1, "*")
   
-  LOOCVpctErrsWrong2 = 100 * LOOCVerrsWrong2/wrongMSEs2
-  LOOISCVpctErrsWrong2 = 100 * LOOISCVerrsWrong2/wrongMSEs2
-  LOOVCCVpctErrsWrong2 = 100 * LOOVCCVerrsWrong2/wrongMSEs2
   griddedCVpctErrsWrong2 = sweep(griddedCVerrsWrong2, 2, 100/wrongMSEs2, "*")
   griddedCVmeanPctErrWrong2 = rowMeans(griddedCVpctErrsWrong2)
-  LOOISRCVpctErrsWrong2 = 100 * LOOISRCVerrs/wrongMSEs2
   # griddedRCVpctErrsWrong2 = sweep(griddedRCVerrsWrong2, 2, 100/wrongMSEs2, "*")
-  LOOISR2CVpctErrsWrong2 = 100 * LOOISR2CVerrsWrong2/wrongMSEs2
   # griddedR2CVpctErrsWrong2 = sweep(griddedR2CVerrsWrong2, 2, 100/wrongMSEs2, "*")
   
-  # calculate relative error
-  LOOCVrelErrs = LOOCVs/trueMSEs
-  LOOISCVrelErrs = LOOISCVs/trueMSEs
-  LOOVCCVrelErrs = LOOVCCVs/trueMSEs
   griddedCVrelErrs = sweep(griddedCVs, 2, trueMSEs, "/")
   griddedCVmeanRelErr = rowMeans(griddedCVrelErrs)
-  LOOISRCVrelErrs = LOOISRCVs/trueMSEs
   # griddedRCVrelErrs = sweep(griddedRCVs, 2, trueMSEs, "/")
-  LOOISR2CVrelErrs = LOOISR2CVs/trueMSEs
   # griddedR2CVrelErrs = sweep(griddedR2CVs, 2, trueMSEs, "/")
   
-  LOOCVrelErrsWrong1 = LOOCVsWrong1/wrongMSEs1
-  LOOISCVrelErrsWrong1 = LOOISCVsWrong1/wrongMSEs1
-  LOOVCCVrelErrsWrong1 = LOOVCCVsWrong1/wrongMSEs1
   griddedCVrelErrsWrong1 = sweep(griddedCVsWrong1, 2, wrongMSEs1, "/")
   griddedCVmeanRelErrWrong1 = rowMeans(griddedCVrelErrsWrong1)
-  LOOISRCVrelErrsWrong1 = LOOISRCVsWrong1/wrongMSEs1
   # griddedRCVrelErrsWrong1 = sweep(griddedRCVsWrong1, 2, wrongMSEs1, "/")
-  LOOISR2CVrelErrsWrong1 = LOOISR2CVsWrong1/wrongMSEs1
   # griddedR2CVrelErrsWrong1 = sweep(griddedR2CVsWrong1, 2, wrongMSEs1, "/")
   
-  LOOCVrelErrsWrong2 = LOOCVsWrong2/wrongMSEs2
-  LOOISCVrelErrsWrong2 = LOOISCVsWrong2/wrongMSEs2
-  LOOVCCVrelErrsWrong2 = LOOVCCVsWrong2/wrongMSEs2
   griddedCVrelErrsWrong2 = sweep(griddedCVsWrong2, 2, wrongMSEs2, "/")
   griddedCVmeanRelErrWrong2 = rowMeans(griddedCVrelErrsWrong2)
-  LOOISRCVrelErrsWrong2 = LOOISRCVsWrong2/wrongMSEs2
   # griddedRCVrelErrsWrong2 = sweep(griddedRCVsWrong2, 2, wrongMSEs2, "/")
-  LOOISR2CVrelErrsWrong2 = LOOISR2CVsWrong2/wrongMSEs2
   # griddedR2CVrelErrsWrong2 = sweep(griddedR2CVsWrong2, 2, wrongMSEs2, "/")
   
-  # calculate proportion of time correct model is selected
-  LOOCVprop1 = mean(LOOCVs < LOOCVsWrong1)
-  LOOISCVprop1 = mean(LOOISCVs < LOOISCVsWrong1)
-  LOOVCCVprop1 = mean(LOOVCCVs < LOOVCCVsWrong1)
   griddedCVprop1 = rowMeans(griddedCVs < griddedCVsWrong1)
-  LOOISRCVprop1 = mean(LOOISRCVs < LOOISRCVsWrong1)
   # griddedRCVprop1 = rowMeans(griddedRCVs < griddedRCVsWrong1)
-  LOOISR2CVprop1 = mean(LOOISR2CVs < LOOISR2CVsWrong1)
   # griddedR2CVprop1 = rowMeans(griddedR2CVs < griddedR2CVsWrong1)
-  LOOISPCVprop1 = mean(LOOISPCVs < LOOISPCVsWrong1)
-  LOOISPRCVprop1 = mean(LOOISPRCVs < LOOISPRCVsWrong1)
-  LOOISPR2CVprop1 = mean(LOOISPR2CVs < LOOISPR2CVsWrong1)
   
-  LOOCVprop2 = mean(LOOCVs < LOOCVsWrong2)
-  LOOISCVprop2 = mean(LOOISCVs < LOOISCVsWrong2)
-  LOOVCCVprop2 = mean(LOOVCCVs < LOOVCCVsWrong2)
   griddedCVprop2 = rowMeans(griddedCVs < griddedCVsWrong2)
-  LOOISRCVprop2 = mean(LOOISRCVs < LOOISRCVsWrong2)
   # griddedRCVprop2 = rowMeans(griddedRCVs < griddedRCVsWrong2)
-  LOOISR2CVprop2 = mean(LOOISR2CVs < LOOISR2CVsWrong2)
   # griddedR2CVprop2 = rowMeans(griddedR2CVs < griddedR2CVsWrong2)
-  LOOISPCVprop2 = mean(LOOISPCVs < LOOISPCVsWrong2)
-  LOOISPRCVprop2 = mean(LOOISPRCVs < LOOISPRCVsWrong2)
-  LOOISPR2CVprop2 = mean(LOOISPR2CVs < LOOISPR2CVsWrong2)
   
-  LOOCVprop12 = mean((LOOCVsWrong1 < LOOCVsWrong2) == (wrongMSEs1 < wrongMSEs2))
-  LOOISCVprop12 = mean((LOOISCVsWrong1 < LOOISCVsWrong2) == (wrongMSEs1 < wrongMSEs2))
-  LOOVCCVprop12 = mean((LOOVCCVsWrong1 < LOOVCCVsWrong2) == (wrongMSEs1 < wrongMSEs2))
   griddedCVprop12 = rowMeans((griddedCVsWrong1 < griddedCVsWrong2) == (wrongMSEs1 < wrongMSEs2))
-  LOOISRCVprop12 = mean((LOOISRCVsWrong1 < LOOISRCVsWrong2) == (wrongMSEs1 < wrongMSEs2))
   # griddedRCVprop12 = rowMeans((griddedRCVsWrong1 < griddedRCVsWrong2) == (wrongMSEs1 < wrongMSEs2))
-  LOOISR2CVprop12 = mean((LOOISR2CVsWrong1 < LOOISR2CVsWrong2) == (wrongMSEs1 < wrongMSEs2))
   # griddedR2CVprop12 = rowMeans((griddedR2CVsWrong1 < griddedR2CVsWrong2) == (wrongMSEs1 < wrongMSEs2))
-  LOOISPCVprop12 = mean((LOOISPCVsWrong1 < LOOISPCVsWrong2) == (wrongMSEs1 < wrongMSEs2))
-  LOOISPRCVprop12 = mean((LOOISPRCVsWrong1 < LOOISPRCVsWrong2) == (wrongMSEs1 < wrongMSEs2))
-  LOOISPR2CVprop12 = mean((LOOISPR2CVsWrong1 < LOOISPR2CVsWrong2) == (wrongMSEs1 < wrongMSEs2))
   
-  LOOCVpropMOE1 = qnorm(.975) * sqrt(LOOCVprop1*(1-LOOCVprop1) / niter)
-  LOOISCVpropMOE1 = qnorm(.975) * sqrt(LOOISCVprop1*(1-LOOISCVprop1) / niter)
-  LOOVCCVpropMOE1 = qnorm(.975) * sqrt(LOOVCCVprop1*(1-LOOVCCVprop1) / niter)
   griddedCVpropMOE1 = qnorm(.975) * sqrt(griddedCVprop1*(1-griddedCVprop1) / niter)
-  LOOISRCVpropMOE1 = qnorm(.975) * sqrt(LOOISRCVprop1*(1-LOOISRCVprop1) / niter)
   # griddedRCVpropMOE1 = qnorm(.975) * sqrt(griddedRCVprop1*(1-griddedRCVprop1) / niter)
-  LOOISR2CVpropMOE1 = qnorm(.975) * sqrt(LOOISR2CVprop1*(1-LOOISR2CVprop1) / niter)
   # griddedR2CVpropMOE1 = qnorm(.975) * sqrt(griddedR2CVprop1*(1-griddedR2CVprop1) / niter)
-  LOOISPCVpropMOE1 = qnorm(.975) * sqrt(LOOISPCVprop1*(1-LOOISPCVprop1) / niter)
-  LOOISPRCVpropMOE1 = qnorm(.975) * sqrt(LOOISPRCVprop1*(1-LOOISPRCVprop1) / niter)
-  LOOISPR2CVpropMOE1 = qnorm(.975) * sqrt(LOOISPR2CVprop1*(1-LOOISPR2CVprop1) / niter)
   
-  LOOCVpropHigh1 = LOOCVprop1 + LOOCVpropMOE1
-  LOOISCVpropHigh1 = LOOISCVprop1 + LOOISCVpropMOE1
-  LOOVCCVpropHigh1 = LOOVCCVprop1 + LOOVCCVpropMOE1
   griddedCVpropHigh1 = griddedCVprop1 + griddedCVpropMOE1
-  LOOISRCVpropHigh1 = LOOISRCVprop1 + LOOISRCVpropMOE1
   # griddedRCVpropHigh1 = griddedRCVprop1 + griddedRCVpropMOE1
-  LOOISR2CVpropHigh1 = LOOISR2CVprop1 + LOOISR2CVpropMOE1
   # griddedR2CVpropHigh1 = griddedR2CVprop1 + griddedR2CVpropMOE1
-  LOOISPCVpropHigh1 = LOOISPCVprop1 + LOOISPCVpropMOE1
-  LOOISCVpropHigh1 = LOOISCVprop1 + LOOISCVpropMOE1
-  LOOISR2CVpropHigh1 = LOOISR2CVprop1 + LOOISR2CVpropMOE1
   
-  LOOCVpropLow1 = LOOCVprop1 - LOOCVpropMOE1
-  LOOISCVpropLow1 = LOOISCVprop1 - LOOISCVpropMOE1
-  LOOVCCVpropLow1 = LOOVCCVprop1 - LOOVCCVpropMOE1
   griddedCVpropLow1 = griddedCVprop1 - griddedCVpropMOE1
-  LOOISRCVpropLow1 = LOOISRCVprop1 - LOOISRCVpropMOE1
   # griddedRCVpropLow1 = griddedRCVprop1 - griddedRCVpropMOE1
-  LOOISR2CVpropLow1 = LOOISR2CVprop1 - LOOISR2CVpropMOE1
   # griddedR2CVpropLow1 = griddedR2CVprop1 - griddedR2CVpropMOE1
-  LOOISPCVpropLow1 = LOOISPCVprop1 - LOOISPCVpropMOE1
-  LOOISCVpropLow1 = LOOISCVprop1 - LOOISCVpropMOE1
   
-  LOOCVpropMOE2 = qnorm(.975) * sqrt(LOOCVprop2*(1-LOOCVprop2) / niter)
-  LOOISCVpropMOE2 = qnorm(.975) * sqrt(LOOISCVprop2*(1-LOOISCVprop2) / niter)
-  LOOVCCVpropMOE2 = qnorm(.975) * sqrt(LOOVCCVprop2*(1-LOOVCCVprop2) / niter)
   griddedCVpropMOE2 = qnorm(.975) * sqrt(griddedCVprop2*(1-griddedCVprop2) / niter)
-  LOOISRCVpropMOE2 = qnorm(.975) * sqrt(LOOISRCVprop2*(1-LOOISRCVprop2) / niter)
   # griddedRCVpropMOE2 = qnorm(.975) * sqrt(griddedRCVprop2*(1-griddedRCVprop2) / niter)
-  LOOISR2CVpropMOE2 = qnorm(.975) * sqrt(LOOISR2CVprop2*(1-LOOISR2CVprop2) / niter)
   # griddedR2CVpropMOE2 = qnorm(.975) * sqrt(griddedR2CVprop2*(1-griddedR2CVprop2) / niter)
-  LOOISPCVpropMOE2 = qnorm(.975) * sqrt(LOOISPCVprop2*(1-LOOISPCVprop2) / niter)
-  LOOISPRCVpropMOE2 = qnorm(.975) * sqrt(LOOISPRCVprop2*(1-LOOISPRCVprop2) / niter)
-  LOOISPR2CVpropMOE2 = qnorm(.975) * sqrt(LOOISPR2CVprop2*(1-LOOISPR2CVprop2) / niter)
   
-  LOOCVpropHigh2 = LOOCVprop2 + LOOCVpropMOE2
-  LOOISCVpropHigh2 = LOOISCVprop2 + LOOISCVpropMOE2
-  LOOVCCVpropHigh2 = LOOVCCVprop2 + LOOVCCVpropMOE2
   griddedCVpropHigh2 = griddedCVprop2 + griddedCVpropMOE2
-  LOOISRCVpropHigh2 = LOOISRCVprop2 + LOOISRCVpropMOE2
   # griddedRCVpropHigh2 = griddedRCVprop2 + griddedRCVpropMOE2
-  LOOISR2CVpropHigh2 = LOOISR2CVprop2 + LOOISR2CVpropMOE2
   # griddedR2CVpropHigh2 = griddedR2CVprop2 + griddedR2CVpropMOE2
-  LOOISPCVpropHigh2 = LOOISPCVprop2 + LOOISPCVpropMOE2
-  LOOISCVpropHigh2 = LOOISCVprop2 + LOOISCVpropMOE2
-  LOOISR2CVpropHigh2 = LOOISR2CVprop2 + LOOISR2CVpropMOE2
   
-  LOOCVpropLow2 = LOOCVprop2 - LOOCVpropMOE2
-  LOOISCVpropLow2 = LOOISCVprop2 - LOOISCVpropMOE2
-  LOOVCCVpropLow2 = LOOVCCVprop2 - LOOVCCVpropMOE2
   griddedCVpropLow2 = griddedCVprop2 - griddedCVpropMOE2
-  LOOISRCVpropLow2 = LOOISRCVprop2 - LOOISRCVpropMOE2
   # griddedRCVpropLow2 = griddedRCVprop2 - griddedRCVpropMOE2
-  LOOISR2CVpropLow2 = LOOISR2CVprop2 - LOOISR2CVpropMOE2
   # griddedR2CVpropLow2 = griddedR2CVprop2 - griddedR2CVpropMOE2
-  LOOISPCVpropLow2 = LOOISPCVprop2 - LOOISPCVpropMOE2
-  LOOISCVpropLow2 = LOOISCVprop2 - LOOISCVpropMOE2
   
-  LOOCVpropMOE12 = qnorm(.975) * sqrt(LOOCVprop12*(1-LOOCVprop12) / niter)
-  LOOISCVpropMOE12 = qnorm(.975) * sqrt(LOOISCVprop12*(1-LOOISCVprop12) / niter)
-  LOOVCCVpropMOE12 = qnorm(.975) * sqrt(LOOVCCVprop12*(1-LOOVCCVprop12) / niter)
   griddedCVpropMOE12 = qnorm(.975) * sqrt(griddedCVprop12*(1-griddedCVprop12) / niter)
-  LOOISRCVpropMOE12 = qnorm(.975) * sqrt(LOOISRCVprop12*(1-LOOISRCVprop12) / niter)
   # griddedRCVpropMOE12 = qnorm(.975) * sqrt(griddedRCVprop12*(1-griddedRCVprop12) / niter)
-  LOOISR2CVpropMOE12 = qnorm(.975) * sqrt(LOOISR2CVprop12*(1-LOOISR2CVprop12) / niter)
   # griddedR2CVpropMOE12 = qnorm(.975) * sqrt(griddedR2CVprop12*(1-griddedR2CVprop12) / niter)
-  LOOISPCVpropMOE12 = qnorm(.975) * sqrt(LOOISPCVprop12*(1-LOOISPCVprop12) / niter)
-  LOOISPRCVpropMOE12 = qnorm(.975) * sqrt(LOOISPRCVprop12*(1-LOOISPRCVprop12) / niter)
-  LOOISPR2CVpropMOE12 = qnorm(.975) * sqrt(LOOISPR2CVprop12*(1-LOOISPR2CVprop12) / niter)
-  
-  LOOCVpropHigh12 = LOOCVprop12 + LOOCVpropMOE12
-  LOOISCVpropHigh12 = LOOISCVprop12 + LOOISCVpropMOE12
-  LOOVCCVpropHigh12 = LOOVCCVprop12 + LOOVCCVpropMOE12
   griddedCVpropHigh12 = griddedCVprop12 + griddedCVpropMOE12
-  LOOISRCVpropHigh12 = LOOISRCVprop12 + LOOISRCVpropMOE12
   # griddedRCVpropHigh12 = griddedRCVprop12 + griddedRCVpropMOE12
-  LOOISR2CVpropHigh12 = LOOISR2CVprop12 + LOOISR2CVpropMOE12
   # griddedR2CVpropHigh12 = griddedR2CVprop12 + griddedR2CVpropMOE12
-  LOOISPCVpropHigh12 = LOOISPCVprop12 + LOOISPCVpropMOE12
-  LOOISCVpropHigh12 = LOOISCVprop12 + LOOISCVpropMOE12
-  LOOISR2CVpropHigh12 = LOOISR2CVprop12 + LOOISR2CVpropMOE12
-  
-  LOOCVpropLow12 = LOOCVprop12 - LOOCVpropMOE12
-  LOOISCVpropLow12 = LOOISCVprop12 - LOOISCVpropMOE12
-  LOOVCCVpropLow12 = LOOVCCVprop12 - LOOVCCVpropMOE12
   griddedCVpropLow12 = griddedCVprop12 - griddedCVpropMOE12
-  LOOISRCVpropLow12 = LOOISRCVprop12 - LOOISRCVpropMOE12
   # griddedRCVpropLow12 = griddedRCVprop12 - griddedRCVpropMOE12
-  LOOISR2CVpropLow12 = LOOISR2CVprop12 - LOOISR2CVpropMOE12
   # griddedR2CVpropLow12 = griddedR2CVprop12 - griddedR2CVpropMOE12
-  LOOISPCVpropLow12 = LOOISPCVprop12 - LOOISPCVpropMOE12
-  LOOISCVpropLow12 = LOOISCVprop12 - LOOISCVpropMOE12
   
-  figureFolder = "figures/gridTest/"
-  if(twoDatasets) {
-    figureFolder = "figures/twoDatasetsTest/"
-  } else if(nonStatError) {
-    figureFolder = "figures/nonstatErrorTest/"
-  }
-  
-  # plot results ----
-  # browser()
-  # proportion of time selecting right model
-  pdf(paste0(figureFolder, "selectProb12_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=6, height=6)
-  ylim = range(c(LOOCVpropHigh12, LOOISCVpropHigh12, LOOISRCVpropHigh12, LOOVCCVpropHigh12, griddedCVpropHigh12, 
-                 LOOCVpropLow12, LOOISCVpropLow12, LOOISRCVpropLow12, LOOVCCVpropLow12, griddedCVpropLow12))
-  plot(gridNs, griddedCVprop12, type="n", log="x", axes=FALSE, 
-       ylim=ylim, xlab="Blocks per side", 
-       ylab="Probability", main=paste0("Gridded CV vs resolution (n=", n, unifTitleText, prefTitleText, twoDatTitleText, ")"))
-  axis(side=1, at=gridNs)
-  axis(side=2)
-  box()
-  lines(gridNs, griddedCVprop12, type="o", pch=19, col="blue")
-  arrows(gridNs, griddedCVprop12, gridNs, griddedCVpropHigh12, angle=90)
-  arrows(gridNs, griddedCVprop12, gridNs, griddedCVpropLow12, angle=90)
-  abline(h=LOOCVprop12, lty=1, col="purple")
-  abline(h=LOOCVpropHigh12, lty=2, col="purple")
-  abline(h=LOOCVpropLow12, lty=2, col="purple")
-  LOORcol = do.call("rgb", as.list(c(col2rgb("purple"))/255 * .8))
-  # abline(h=LOORCVprop, lty=1, col="purple")
-  # abline(h=LOORCVpropHigh, lty=2, col="purple")
-  # abline(h=LOORCVpropLow, lty=2, col="purple")
-  abline(h=LOOISCVprop12, lty=1, col="orange")
-  abline(h=LOOISCVpropHigh12, lty=2, col="orange")
-  abline(h=LOOISCVpropLow12, lty=2, col="orange")
-  LOOISRcol = do.call("rgb", as.list(c(col2rgb("orange"))/255 * .8))
-  abline(h=LOOISPCVprop12, lty=1, col=LOOISRcol)
-  abline(h=LOOISPCVpropHigh12, lty=2, col=LOOISRcol)
-  abline(h=LOOISPCVpropLow12, lty=2, col=LOOISRcol)
-  abline(h=LOOVCCVprop12, lty=1, col="brown")
-  abline(h=LOOVCCVpropHigh12, lty=2, col="brown")
-  abline(h=LOOVCCVpropLow12, lty=2, col="brown")
-  legend("topright", c("Gridded", "LOO", "LOOVC", "LOOIS", "LOOISP"), col=c("blue", "purple", "brown", "orange", LOOISRcol), 
-         pch=c(19, NA, NA, NA, NA), lty=1)
-  dev.off()
-  
-  # bias in score of true model
-  pdf(paste0(figureFolder, "griddedBias_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=6, height=6)
-  plot(gridNs, griddedCVmeanErr, type="n", log="x", axes=FALSE, 
-       ylim=c(min(c(griddedCVmeanErr, mean(LOOCVerrs))), max(griddedCVmeanErr)), 
-       xlab="Blocks per side", 
-       ylab="Bias", main=paste0("Gridded CV vs resolution (n=", n, unifTitleText, prefTitleText, twoDatTitleText, nonStatErrorTitleText, ")"))
-  axis(side=1, at=gridNs)
-  axis(side=2)
-  box()
-  lines(gridNs, griddedCVmeanErr, type="o", pch=19, col="blue")
-  abline(h=mean(LOOCVerrs), lty=2, col="purple")
-  abline(h=mean(LOOISCVerrs), lty=2, col="orange")
-  abline(h=mean(LOOISPCVerrs), lty=2, col=LOOISRcol)
-  abline(h=mean(LOOVCCVerrs), lty=2, col="brown")
-  legend("topright", c("Gridded", "LOO", "LOOVC", "LOOIS", "LOOISP"), 
-         col=c("blue", "purple", "brown", "orange", LOOISRcol), 
-         pch=c(19, NA, NA, NA, NA), lty=c(1, 2, 2, 2, 2))
-  dev.off()
-  
-  pdf(paste0(figureFolder, "griddedBiasWrong1_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=6, height=6)
-  plot(gridNs, griddedCVmeanErrWrong1, type="n", log="x", axes=FALSE, 
-       ylim=c(min(c(griddedCVmeanErrWrong1, mean(LOOCVerrsWrong1))), max(griddedCVmeanErrWrong1)), 
-       xlab="Blocks per side", 
-       ylab="Bias", main=paste0("Gridded CV vs resolution (n=", n, unifTitleText, prefTitleText, twoDatTitleText, nonStatErrorTitleText, ")"))
-  axis(side=1, at=gridNs)
-  axis(side=2)
-  box()
-  lines(gridNs, griddedCVmeanErrWrong1, type="o", pch=19, col="blue")
-  abline(h=mean(LOOCVerrsWrong1), lty=2, col="purple")
-  abline(h=mean(LOOISCVerrsWrong1), lty=2, col="orange")
-  abline(h=mean(LOOISPCVerrsWrong1), lty=2, col=LOOISRcol)
-  abline(h=mean(LOOVCCVerrsWrong1), lty=2, col="brown")
-  legend("topright", c("Gridded", "LOO", "LOOVC", "LOOIS", "LOOISP"), 
-         col=c("blue", "purple", "brown", "orange", LOOISRcol), 
-         pch=c(19, NA, NA, NA, NA), lty=c(1, 2, 2, 2, 2))
-  dev.off()
-  
-  pdf(paste0(figureFolder, "griddedBiasWrong2_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=6, height=6)
-  plot(gridNs, griddedCVmeanErrWrong2, type="n", log="x", axes=FALSE, 
-       ylim=c(min(c(griddedCVmeanErrWrong2, mean(LOOCVerrsWrong2))), max(griddedCVmeanErrWrong2)), 
-       xlab="Blocks per side", 
-       ylab="Bias", main=paste0("Gridded CV vs resolution (n=", n, unifTitleText, prefTitleText, twoDatTitleText, nonStatErrorTitleText, ")"))
-  axis(side=1, at=gridNs)
-  axis(side=2)
-  box()
-  lines(gridNs, griddedCVmeanErrWrong2, type="o", pch=19, col="blue")
-  abline(h=mean(LOOCVerrsWrong2), lty=2, col="purple")
-  abline(h=mean(LOOISCVerrsWrong2), lty=2, col="orange")
-  abline(h=mean(LOOISPCVerrsWrong2), lty=2, col=LOOISRcol)
-  abline(h=mean(LOOVCCVerrsWrong2), lty=2, col="brown")
-  legend("topright", c("Gridded", "LOO", "LOOVC", "LOOIS", "LOOISP"), 
-         col=c("blue", "purple", "brown", "orange", LOOISRcol), 
-         pch=c(19, NA, NA, NA, NA), lty=c(1, 2, 2, 2, 2))
-  dev.off()
-  
-  pdf(paste0(figureFolder, "griddedBiasWrong12_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=6, height=6)
-  plot(gridNs, griddedCVmeanErrWrong12, type="n", log="x", axes=FALSE, 
-       ylim=c(min(c(griddedCVmeanErrWrong12, mean(LOOCVerrsWrong12))), max(griddedCVmeanErrWrong12)), 
-       xlab="Blocks per side", 
-       ylab="Bias", main=paste0("Gridded CV vs resolution (n=", n, unifTitleText, prefTitleText, twoDatTitleText, nonStatErrorTitleText, ")"))
-  axis(side=1, at=gridNs)
-  axis(side=2)
-  box()
-  lines(gridNs, griddedCVmeanErrWrong12, type="o", pch=19, col="blue")
-  abline(h=mean(LOOCVerrsWrong12), lty=2, col="purple")
-  abline(h=mean(LOOISCVerrsWrong12), lty=2, col="orange")
-  abline(h=mean(LOOISPCVerrsWrong12), lty=2, col=LOOISRcol)
-  abline(h=mean(LOOVCCVerrsWrong12), lty=2, col="brown")
-  legend("topright", c("Gridded", "LOO", "LOOVC", "LOOIS", "LOOISP"), 
-         col=c("blue", "purple", "brown", "orange", LOOISRcol), 
-         pch=c(19, NA, NA, NA, NA), lty=c(1, 2, 2, 2, 2))
-  dev.off()
-  
-  pdf(paste0(figureFolder, "griddedBiasExtrap_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=6, height=6)
-  plot(gridNs, griddedCVmeanErr, type="n", log="x", axes=FALSE, 
-       ylim=c(min(c(griddedCVmeanErr, mean(LOOCVerrs))), 1+sigmaEpsSq-mean(trueMSEs)), 
-       xlab="Blocks per side", 
-       ylab="MSE Bias", main=paste0("Gridded CV vs resolution (n=", n, unifTitleText, prefTitleText, twoDatTitleText, nonStatErrorTitleText, ")"))
-  axis(side=1, at=gridNs)
-  axis(side=2)
-  box()
-  lines(gridNs, griddedCVmeanErr, type="o", pch=19, col="blue")
-  abline(h=mean(LOOCVerrs), lty=2, col="purple")
-  abline(h=mean(LOOISCVerrs), lty=2, col="orange")
-  abline(h=mean(LOOVCCVerrs), lty=2, col="brown")
-  abline(h=0, lty=2, col="green")
-  abline(h=1+sigmaEpsSq-mean(trueMSEs), lty=2, col="red")
-  legend("right", c("Gridded", "LOO", "LOOIS", "LOOVC", "Extrapolation", "Interpolation"), 
-         col=c("blue", "purple", "orange", "brown", "red", "green"), 
-         pch=c(19, NA, NA, NA, NA, NA), lty=c(1, 2, 2, 2, 2, 2))
-  dev.off()
-  
-  # then relative/percent bias
-  pdf(paste0(figureFolder, "griddedPctBias_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=6, height=6)
-  plot(gridNs, griddedCVmeanPctErr, type="n", log="x", axes=FALSE, 
-       ylim=c(min(c(griddedCVmeanPctErr, mean(LOOCVpctErrs))), max(griddedCVmeanPctErr)), 
-       xlab="Blocks per side", 
-       ylab="MSE Relative Bias (%)", main=paste0("Gridded CV vs resolution (n=", n, unifTitleText, prefTitleText, twoDatTitleText, nonStatErrorTitleText, ")"))
-  axis(side=1, at=gridNs)
-  axis(side=2)
-  box()
-  lines(gridNs, griddedCVmeanPctErr, type="o", pch=19, col="blue")
-  abline(h=mean(LOOCVpctErrs), lty=2, col="purple")
-  abline(h=mean(LOOISCVpctErrs), lty=2, col="orange")
-  abline(h=mean(LOOVCCVpctErrs), lty=2, col="brown")
-  abline(h=0, lty=2, col="green")
-  legend("topright", c("Gridded", "LOO", "LOOIS", "LOOVC", "Truth"), col=c("blue", "purple", "orange", "brown", "green"), 
-         pch=c(19, NA, NA, NA, NA), lty=c(1, 2, 2, 2, 2))
-  dev.off()
-  
-  pdf(paste0(figureFolder, "griddedPctBiasWrong1_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=6, height=6)
-  plot(gridNs, griddedCVmeanPctErrWrong1, type="n", log="x", axes=FALSE, 
-       ylim=c(min(c(griddedCVmeanPctErrWrong1, mean(LOOCVpctErrsWrong1))), max(griddedCVmeanPctErrWrong1)), 
-       xlab="Blocks per side", 
-       ylab="MSE Relative Bias (%)", main=paste0("Gridded CV vs resolution (n=", n, unifTitleText, prefTitleText, twoDatTitleText, nonStatErrorTitleText, ")"))
-  axis(side=1, at=gridNs)
-  axis(side=2)
-  box()
-  lines(gridNs, griddedCVmeanPctErrWrong1, type="o", pch=19, col="blue")
-  abline(h=mean(LOOCVpctErrsWrong1), lty=2, col="purple")
-  abline(h=mean(LOOISCVpctErrsWrong1), lty=2, col="orange")
-  abline(h=mean(LOOVCCVpctErrsWrong1), lty=2, col="brown")
-  abline(h=0, lty=2, col="green")
-  legend("topright", c("Gridded", "LOO", "LOOIS", "LOOVC", "Truth"), col=c("blue", "purple", "orange", "brown", "green"), 
-         pch=c(19, NA, NA, NA, NA), lty=c(1, 2, 2, 2, 2))
-  dev.off()
-  
-  pdf(paste0(figureFolder, "griddedPctBiasExtrap_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=6, height=6)
-  plot(gridNs, griddedCVmeanPctErr, type="n", log="x", axes=FALSE, 
-       ylim=c(min(c(griddedCVmeanPctErr, mean(LOOCVpctErrs))), 100*mean((1+sigmaEpsSq-trueMSEs)/trueMSEs)), 
-       xlab="Blocks per side", 
-       ylab="MSE Relative Bias (%)", main=paste0("Gridded CV vs resolution (n=", n, unifTitleText, prefTitleText, twoDatTitleText, nonStatErrorTitleText, ")"))
-  axis(side=1, at=gridNs)
-  axis(side=2)
-  box()
-  lines(gridNs, griddedCVmeanPctErr, type="o", pch=19, col="blue")
-  abline(h=mean(LOOCVpctErrs), lty=2, col="purple")
-  abline(h=mean(LOOISCVpctErrs), lty=2, col="orange")
-  abline(h=mean(LOOVCCVpctErrs), lty=2, col="brown")
-  abline(h=0, lty=2, col="green")
-  abline(h=100*mean((1+sigmaEpsSq-trueMSEs)/trueMSEs), lty=2, col="red")
-  legend("right", c("Gridded", "LOO", "LOOIS", "LOOVC", "Extrapolation", "Interpolation"), 
-         col=c("blue", "purple", "orange", "brown", "red", "green"), 
-         pch=c(19, NA, NA, NA, NA, NA), lty=c(1, 2, 2, 2, 2, 2))
-  dev.off()
-  
-  # then relative bias
-  if(is.null(relTicks1)) {
-    if(n == 50) {
-      if(!unif && !twoDatasets) {
-        relTicks1 = c(.67, 1, 1.5, 2, 2.5, 3)
-        relTickLabs1 = c("0.67", "1", "1.5", "2", "2.5", "3")
-        relTicks2 = c(.67, .75, .9, 1, 1.1, 1.25, 1.5, 2, 3, 5)
-        relTickLabs2 = c("0.67", "0.75", "0.9", "1", "1.1", "1.25", "1.5", "2", "3", "5")
-      } else if(!twoDatasets) {
-        relTicks1 = c(.67, 1, 2, 3, 4)
-        relTickLabs1 = c("0.67", "1", "2", "3", "4")
-        relTicks2 = c(.67, 1, 2, 4, 6, 8)
-        relTickLabs2 = c("0.67", "1", "2", "4", "6", "8")
+  types = c("LOO", paste("KFold", Ks, sep=""))
+  for(typeI in 1:length(types)) {
+    type = types[typeI]
+    methods=c("", "IW", "IWR", "IWR2", 
+              "IWP", "IWPR", "IWPR2", 
+              "VC", "VCR", "VCR2", 
+              "VCP", "VCPR", "VCPR2")
+    
+    if(type == "LOO") {
+      thisType = "LOO"
+      plotTitleType = "LOO"
+    } else {
+      thisType = "KFold"
+      plotTitleType = paste(Ks[typeI-1], "Fold", sep="-")
+    }
+    
+    coreVarNames = str_replace(methods, "IW", "IS")
+    coreVarNames = paste(coreVarNames, "CV", sep="")
+    
+    # names of the variables in the results
+    origVarNames = paste(thisType, coreVarNames, sep="")
+    origVarNamesWrong1 = paste(thisType, coreVarNames, "Wrong1", sep="")
+    origVarNamesWrong2 = paste(thisType, coreVarNames, "Wrong2", sep="")
+    
+    varNames = paste("this", coreVarNames, "s", sep="")
+    varNames = paste("this", coreVarNames, "s", sep="")
+    varNamesWrong1 = paste("this", coreVarNames, "sWrong1", sep="")
+    varNamesWrong2 = paste("this", coreVarNames, "sWrong2", sep="")
+    
+    for(i in 1:length(varNames)) {
+      # get variables from the results
+      if(thisType == "LOO") {
+        assign(varNames[i], 
+               sapply(results, getName, thisName=origVarNames[i]))
+        assign(varNamesWrong1[i], 
+               sapply(results, getName, thisName=origVarNamesWrong1[i]))
+        assign(varNamesWrong2[i], 
+               sapply(results, getName, thisName=origVarNamesWrong2[i]))
       } else {
-        if(rho == -.8) {
-          relTicks1 = seq(.7, 1.5, by=.1)
-          relTickLabs1 = as.character(relTicks1)
-          relTicks2 = c(.67, .75, .9, 1, 1.1, 1.25, 1.5, 2, 3, 5)
-          relTickLabs2 = c("0.67", "0.75", "0.9", "1", "1.1", "1.25", "1.5", "2", "3", "5")
-        } else if(rho == 0) {
-          relTicks1 = seq(.7, 3, by=.1)
-          relTickLabs1 = as.character(relTicks1)
-          relTicks2 = c(.67, 1, 2, 3, 5)
-          relTickLabs2 = c("0.67", "1", "2", "3", "5")
-        } else if(rho == .8) {
-          relTicks1 = seq(.7, 1.5, by=.1)
-          relTickLabs1 = as.character(relTicks1)
-          relTicks2 = c(.67, .75, .9, 1, 1.1, 1.25, 1.5, 2, 3, 5)
-          relTickLabs2 = c("0.67", "0.75", "0.9", "1", "1.1", "1.25", "1.5", "2", "3", "5")
-        }
-        
+        # in the case of K-fold, the length of each variable is length(Ks), not 1
+        assign(varNames[i], 
+               sapply(results, getName, thisName=origVarNames[i], ind=typeI-1))
+        assign(varNamesWrong1[i], 
+               sapply(results, getName, thisName=origVarNamesWrong1[i], ind=typeI-1))
+        assign(varNamesWrong2[i], 
+               sapply(results, getName, thisName=origVarNamesWrong2[i], ind=typeI-1))
       }
-    } else if(n == 500) {
-      if(!unif && !twoDatasets) {
-        relTicks = c(.6, 1, 2, 5, 10, 20, 50, 100)
-        relTickLabs = c("0.6", "1", "2", "5", "10", "20", "50", "100")
+      
+    }
+    
+    # make the plots
+    
+    thisCVerrs = thisCVs - trueMSEs
+    thisISCVerrs = thisISCVs - trueMSEs
+    thisVCCVerrs = thisVCCVs - trueMSEs
+    thisISRCVerrs = thisISRCVs - trueMSEs
+    thisVCRCVerrs = thisVCRCVs - trueMSEs
+    thisISR2CVerrs = thisISR2CVs - trueMSEs
+    thisVCR2CVerrs = thisVCR2CVs - trueMSEs
+    
+    thisISPCVerrs = thisISPCVs - trueMSEs
+    thisISPRCVerrs = thisISPRCVs - trueMSEs
+    thisISPR2CVerrs = thisISPR2CVs - trueMSEs
+    
+    thisCVerrsWrong1 = thisCVsWrong1 - wrongMSEs1
+    thisISCVerrsWrong1 = thisISCVsWrong1 - wrongMSEs1
+    thisVCCVerrsWrong1 = thisVCCVsWrong1 - wrongMSEs1
+    
+    thisISRCVerrsWrong1 = thisISRCVsWrong1 - wrongMSEs1
+    thisVCRCVerrsWrong1 = thisVCRCVsWrong1 - wrongMSEs1
+    thisISR2CVerrsWrong1 = thisISR2CVsWrong1 - wrongMSEs1
+    thisVCR2CVerrsWrong1 = thisVCR2CVsWrong1 - wrongMSEs1
+    
+    
+    thisISPCVerrsWrong1 = thisISPCVsWrong1 - wrongMSEs1
+    thisISPRCVerrsWrong1 = thisISPRCVsWrong1 - wrongMSEs1
+    thisISPR2CVerrsWrong1 = thisISPR2CVsWrong1 - wrongMSEs1
+    
+    thisCVerrsWrong2 = thisCVsWrong2 - wrongMSEs2
+    thisISCVerrsWrong2 = thisISCVsWrong2 - wrongMSEs2
+    thisVCCVerrsWrong2 = thisVCCVsWrong2 - wrongMSEs2
+    thisISRCVerrsWrong2 = thisISRCVsWrong2 - wrongMSEs2
+    thisVCRCVerrsWrong2 = thisVCRCVsWrong2 - wrongMSEs2
+    
+    thisISR2CVerrsWrong2 = thisISR2CVsWrong2 - wrongMSEs2
+    thisVCR2CVerrsWrong2 = thisVCR2CVsWrong2 - wrongMSEs2
+    
+    
+    thisISPCVerrsWrong2 = thisISPCVsWrong2 - wrongMSEs2
+    thisISPRCVerrsWrong2 = thisISPRCVsWrong2 - wrongMSEs2
+    thisISPR2CVerrsWrong2 = thisISPR2CVsWrong2 - wrongMSEs2
+    
+    thisCVerrsWrong12 = thisCVsWrong1 - thisCVsWrong2 - errsWrong12
+    thisISCVerrsWrong12 = thisISCVsWrong1 - thisISCVsWrong2 - errsWrong12
+    thisVCCVerrsWrong12 = thisVCCVsWrong1 - thisVCCVsWrong2 - errsWrong12
+    thisISRCVerrsWrong12 = thisISRCVsWrong1 - thisISRCVsWrong2 - errsWrong12
+    thisVCRCVerrsWrong12 = thisVCRCVsWrong1 - thisVCRCVsWrong2 - errsWrong12
+    
+    thisISR2CVerrsWrong12 = thisISR2CVsWrong1 - thisISR2CVsWrong2 - errsWrong12
+    thisVCR2CVerrsWrong12 = thisVCR2CVsWrong1 - thisVCR2CVsWrong2 - errsWrong12
+    
+    
+    thisISPCVerrsWrong12 = thisISPCVsWrong1 - thisISPCVsWrong2 - errsWrong12
+    thisISPRCVerrsWrong12 = thisISPRCVsWrong1 - thisISPRCVsWrong2 - errsWrong12
+    thisISPR2CVerrsWrong12 = thisISPR2CVsWrong1 - thisISPR2CVsWrong2 - errsWrong12
+    
+    # # calculate percent error
+    thisCVpctErrs = 100 * thisCVerrs/trueMSEs
+    thisISCVpctErrs = 100 * thisISCVerrs/trueMSEs
+    thisVCCVpctErrs = 100 * thisVCCVerrs/trueMSEs
+    thisISRCVpctErrs = 100 * thisISRCVerrs/trueMSEs
+    thisISR2CVpctErrs = 100 * thisISR2CVerrs/trueMSEs
+
+
+    thisCVpctErrsWrong1 = 100 * thisCVerrsWrong1/wrongMSEs1
+    thisISCVpctErrsWrong1 = 100 * thisISCVerrsWrong1/wrongMSEs1
+    thisVCCVpctErrsWrong1 = 100 * thisVCCVerrsWrong1/wrongMSEs1
+    thisISRCVpctErrsWrong1 = 100 * thisISRCVerrs/wrongMSEs1
+    thisISR2CVpctErrsWrong1 = 100 * thisISR2CVerrsWrong1/wrongMSEs1
+
+
+    thisCVpctErrsWrong2 = 100 * thisCVerrsWrong2/wrongMSEs2
+    thisISCVpctErrsWrong2 = 100 * thisISCVerrsWrong2/wrongMSEs2
+    thisVCCVpctErrsWrong2 = 100 * thisVCCVerrsWrong2/wrongMSEs2
+    thisISRCVpctErrsWrong2 = 100 * thisISRCVerrs/wrongMSEs2
+    thisISR2CVpctErrsWrong2 = 100 * thisISR2CVerrsWrong2/wrongMSEs2
+
+    
+    # calculate relative error
+    thisCVrelErrs = thisCVs/trueMSEs
+    thisISCVrelErrs = thisISCVs/trueMSEs
+    thisVCCVrelErrs = thisVCCVs/trueMSEs
+    thisISRCVrelErrs = thisISRCVs/trueMSEs
+    thisISR2CVrelErrs = thisISR2CVs/trueMSEs
+
+
+    thisCVrelErrsWrong1 = thisCVsWrong1/wrongMSEs1
+    thisISCVrelErrsWrong1 = thisISCVsWrong1/wrongMSEs1
+    thisVCCVrelErrsWrong1 = thisVCCVsWrong1/wrongMSEs1
+    thisISRCVrelErrsWrong1 = thisISRCVsWrong1/wrongMSEs1
+    thisISR2CVrelErrsWrong1 = thisISR2CVsWrong1/wrongMSEs1
+
+
+    thisCVrelErrsWrong2 = thisCVsWrong2/wrongMSEs2
+    thisISCVrelErrsWrong2 = thisISCVsWrong2/wrongMSEs2
+    thisVCCVrelErrsWrong2 = thisVCCVsWrong2/wrongMSEs2
+    thisISRCVrelErrsWrong2 = thisISRCVsWrong2/wrongMSEs2
+    thisISR2CVrelErrsWrong2 = thisISR2CVsWrong2/wrongMSEs2
+    
+    
+    # calculate proportion of time correct model is selected
+    thisCVprop1 = mean(thisCVs < thisCVsWrong1)
+    thisISCVprop1 = mean(thisISCVs < thisISCVsWrong1)
+    thisVCCVprop1 = mean(thisVCCVs < thisVCCVsWrong1)
+    thisISRCVprop1 = mean(thisISRCVs < thisISRCVsWrong1)
+    thisISR2CVprop1 = mean(thisISR2CVs < thisISR2CVsWrong1)
+    
+    thisISPCVprop1 = mean(thisISPCVs < thisISPCVsWrong1)
+    thisISPRCVprop1 = mean(thisISPRCVs < thisISPRCVsWrong1)
+    thisISPR2CVprop1 = mean(thisISPR2CVs < thisISPR2CVsWrong1)
+    
+    thisCVprop2 = mean(thisCVs < thisCVsWrong2)
+    thisISCVprop2 = mean(thisISCVs < thisISCVsWrong2)
+    thisVCCVprop2 = mean(thisVCCVs < thisVCCVsWrong2)
+    thisISRCVprop2 = mean(thisISRCVs < thisISRCVsWrong2)
+    thisISR2CVprop2 = mean(thisISR2CVs < thisISR2CVsWrong2)
+    
+    thisISPCVprop2 = mean(thisISPCVs < thisISPCVsWrong2)
+    thisISPRCVprop2 = mean(thisISPRCVs < thisISPRCVsWrong2)
+    thisISPR2CVprop2 = mean(thisISPR2CVs < thisISPR2CVsWrong2)
+    
+    thisCVprop12 = mean((thisCVsWrong1 < thisCVsWrong2) == (wrongMSEs1 < wrongMSEs2))
+    thisISCVprop12 = mean((thisISCVsWrong1 < thisISCVsWrong2) == (wrongMSEs1 < wrongMSEs2))
+    thisVCCVprop12 = mean((thisVCCVsWrong1 < thisVCCVsWrong2) == (wrongMSEs1 < wrongMSEs2))
+    thisISRCVprop12 = mean((thisISRCVsWrong1 < thisISRCVsWrong2) == (wrongMSEs1 < wrongMSEs2))
+    thisISR2CVprop12 = mean((thisISR2CVsWrong1 < thisISR2CVsWrong2) == (wrongMSEs1 < wrongMSEs2))
+    
+    thisISPCVprop12 = mean((thisISPCVsWrong1 < thisISPCVsWrong2) == (wrongMSEs1 < wrongMSEs2))
+    thisISPRCVprop12 = mean((thisISPRCVsWrong1 < thisISPRCVsWrong2) == (wrongMSEs1 < wrongMSEs2))
+    thisISPR2CVprop12 = mean((thisISPR2CVsWrong1 < thisISPR2CVsWrong2) == (wrongMSEs1 < wrongMSEs2))
+    
+    thisCVpropMOE1 = qnorm(.975) * sqrt(thisCVprop1*(1-thisCVprop1) / niter)
+    thisISCVpropMOE1 = qnorm(.975) * sqrt(thisISCVprop1*(1-thisISCVprop1) / niter)
+    thisVCCVpropMOE1 = qnorm(.975) * sqrt(thisVCCVprop1*(1-thisVCCVprop1) / niter)
+    thisISRCVpropMOE1 = qnorm(.975) * sqrt(thisISRCVprop1*(1-thisISRCVprop1) / niter)
+    thisISR2CVpropMOE1 = qnorm(.975) * sqrt(thisISR2CVprop1*(1-thisISR2CVprop1) / niter)
+    
+    thisISPCVpropMOE1 = qnorm(.975) * sqrt(thisISPCVprop1*(1-thisISPCVprop1) / niter)
+    thisISPRCVpropMOE1 = qnorm(.975) * sqrt(thisISPRCVprop1*(1-thisISPRCVprop1) / niter)
+    thisISPR2CVpropMOE1 = qnorm(.975) * sqrt(thisISPR2CVprop1*(1-thisISPR2CVprop1) / niter)
+    
+    thisCVpropHigh1 = thisCVprop1 + thisCVpropMOE1
+    thisISCVpropHigh1 = thisISCVprop1 + thisISCVpropMOE1
+    thisVCCVpropHigh1 = thisVCCVprop1 + thisVCCVpropMOE1
+    
+    thisISRCVpropHigh1 = thisISRCVprop1 + thisISRCVpropMOE1
+    thisISR2CVpropHigh1 = thisISR2CVprop1 + thisISR2CVpropMOE1
+    
+    thisISPCVpropHigh1 = thisISPCVprop1 + thisISPCVpropMOE1
+    thisISCVpropHigh1 = thisISCVprop1 + thisISCVpropMOE1
+    thisISR2CVpropHigh1 = thisISR2CVprop1 + thisISR2CVpropMOE1
+    
+    thisCVpropLow1 = thisCVprop1 - thisCVpropMOE1
+    thisISCVpropLow1 = thisISCVprop1 - thisISCVpropMOE1
+    thisVCCVpropLow1 = thisVCCVprop1 - thisVCCVpropMOE1
+    thisISRCVpropLow1 = thisISRCVprop1 - thisISRCVpropMOE1
+    thisISR2CVpropLow1 = thisISR2CVprop1 - thisISR2CVpropMOE1
+    
+    thisISPCVpropLow1 = thisISPCVprop1 - thisISPCVpropMOE1
+    thisISCVpropLow1 = thisISCVprop1 - thisISCVpropMOE1
+    
+    thisCVpropMOE2 = qnorm(.975) * sqrt(thisCVprop2*(1-thisCVprop2) / niter)
+    thisISCVpropMOE2 = qnorm(.975) * sqrt(thisISCVprop2*(1-thisISCVprop2) / niter)
+    thisVCCVpropMOE2 = qnorm(.975) * sqrt(thisVCCVprop2*(1-thisVCCVprop2) / niter)
+    thisISRCVpropMOE2 = qnorm(.975) * sqrt(thisISRCVprop2*(1-thisISRCVprop2) / niter)
+    thisISR2CVpropMOE2 = qnorm(.975) * sqrt(thisISR2CVprop2*(1-thisISR2CVprop2) / niter)
+    
+    thisISPCVpropMOE2 = qnorm(.975) * sqrt(thisISPCVprop2*(1-thisISPCVprop2) / niter)
+    thisISPRCVpropMOE2 = qnorm(.975) * sqrt(thisISPRCVprop2*(1-thisISPRCVprop2) / niter)
+    thisISPR2CVpropMOE2 = qnorm(.975) * sqrt(thisISPR2CVprop2*(1-thisISPR2CVprop2) / niter)
+    
+    thisCVpropHigh2 = thisCVprop2 + thisCVpropMOE2
+    thisISCVpropHigh2 = thisISCVprop2 + thisISCVpropMOE2
+    thisVCCVpropHigh2 = thisVCCVprop2 + thisVCCVpropMOE2
+    thisISRCVpropHigh2 = thisISRCVprop2 + thisISRCVpropMOE2
+    
+    thisISR2CVpropHigh2 = thisISR2CVprop2 + thisISR2CVpropMOE2
+    
+    thisISPCVpropHigh2 = thisISPCVprop2 + thisISPCVpropMOE2
+    thisISCVpropHigh2 = thisISCVprop2 + thisISCVpropMOE2
+    thisISR2CVpropHigh2 = thisISR2CVprop2 + thisISR2CVpropMOE2
+    
+    thisCVpropLow2 = thisCVprop2 - thisCVpropMOE2
+    thisISCVpropLow2 = thisISCVprop2 - thisISCVpropMOE2
+    thisVCCVpropLow2 = thisVCCVprop2 - thisVCCVpropMOE2
+    thisISRCVpropLow2 = thisISRCVprop2 - thisISRCVpropMOE2
+    thisISR2CVpropLow2 = thisISR2CVprop2 - thisISR2CVpropMOE2
+    thisISPCVpropLow2 = thisISPCVprop2 - thisISPCVpropMOE2
+    thisISCVpropLow2 = thisISCVprop2 - thisISCVpropMOE2
+    
+    thisCVpropMOE12 = qnorm(.975) * sqrt(thisCVprop12*(1-thisCVprop12) / niter)
+    thisISCVpropMOE12 = qnorm(.975) * sqrt(thisISCVprop12*(1-thisISCVprop12) / niter)
+    thisVCCVpropMOE12 = qnorm(.975) * sqrt(thisVCCVprop12*(1-thisVCCVprop12) / niter)
+    thisISRCVpropMOE12 = qnorm(.975) * sqrt(thisISRCVprop12*(1-thisISRCVprop12) / niter)
+    thisISR2CVpropMOE12 = qnorm(.975) * sqrt(thisISR2CVprop12*(1-thisISR2CVprop12) / niter)
+    thisISPCVpropMOE12 = qnorm(.975) * sqrt(thisISPCVprop12*(1-thisISPCVprop12) / niter)
+    thisISPRCVpropMOE12 = qnorm(.975) * sqrt(thisISPRCVprop12*(1-thisISPRCVprop12) / niter)
+    thisISPR2CVpropMOE12 = qnorm(.975) * sqrt(thisISPR2CVprop12*(1-thisISPR2CVprop12) / niter)
+    
+    thisCVpropHigh12 = thisCVprop12 + thisCVpropMOE12
+    thisISCVpropHigh12 = thisISCVprop12 + thisISCVpropMOE12
+    thisVCCVpropHigh12 = thisVCCVprop12 + thisVCCVpropMOE12
+    thisISRCVpropHigh12 = thisISRCVprop12 + thisISRCVpropMOE12
+    thisISR2CVpropHigh12 = thisISR2CVprop12 + thisISR2CVpropMOE12
+    
+    thisISPCVpropHigh12 = thisISPCVprop12 + thisISPCVpropMOE12
+    thisISCVpropHigh12 = thisISCVprop12 + thisISCVpropMOE12
+    thisISR2CVpropHigh12 = thisISR2CVprop12 + thisISR2CVpropMOE12
+    
+    thisCVpropLow12 = thisCVprop12 - thisCVpropMOE12
+    thisISCVpropLow12 = thisISCVprop12 - thisISCVpropMOE12
+    thisVCCVpropLow12 = thisVCCVprop12 - thisVCCVpropMOE12
+    thisISRCVpropLow12 = thisISRCVprop12 - thisISRCVpropMOE12
+    thisISR2CVpropLow12 = thisISR2CVprop12 - thisISR2CVpropMOE12
+    thisISPCVpropLow12 = thisISPCVprop12 - thisISPCVpropMOE12
+    thisISCVpropLow12 = thisISCVprop12 - thisISCVpropMOE12
+    
+    figureFolder = "figures/gridTest/"
+    if(twoDatasets) {
+      figureFolder = "figures/twoDatasetsTest/"
+    } else if(nonStatError) {
+      figureFolder = "figures/nonstatErrorTest/"
+    }
+    
+    # plot results ----
+    
+    # proportion of time selecting right model
+    pdf(paste0(figureFolder, type,  "_selectProb12_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=6, height=6)
+    ylim = range(c(thisCVpropHigh12, thisISCVpropHigh12, thisISRCVpropHigh12, thisVCCVpropHigh12, griddedCVpropHigh12, 
+                   thisCVpropLow12, thisISCVpropLow12, thisISRCVpropLow12, thisVCCVpropLow12, griddedCVpropLow12))
+    plot(gridNs, griddedCVprop12, type="n", log="x", axes=FALSE, 
+         ylim=ylim, xlab="Blocks per side", 
+         ylab="Probability", main=paste0("Gridded CV vs resolution (n=", n, unifTitleText, prefTitleText, twoDatTitleText, ")"))
+    axis(side=1, at=gridNs)
+    axis(side=2)
+    box()
+    lines(gridNs, griddedCVprop12, type="o", pch=19, col="blue")
+    arrows(gridNs, griddedCVprop12, gridNs, griddedCVpropHigh12, angle=90)
+    arrows(gridNs, griddedCVprop12, gridNs, griddedCVpropLow12, angle=90)
+    abline(h=thisCVprop12, lty=1, col="purple")
+    abline(h=thisCVpropHigh12, lty=2, col="purple")
+    abline(h=thisCVpropLow12, lty=2, col="purple")
+    thisRcol = do.call("rgb", as.list(c(col2rgb("purple"))/255 * .8))
+    # abline(h=thisRCVprop, lty=1, col="purple")
+    # abline(h=thisRCVpropHigh, lty=2, col="purple")
+    # abline(h=thisRCVpropLow, lty=2, col="purple")
+    abline(h=thisISCVprop12, lty=1, col="orange")
+    abline(h=thisISCVpropHigh12, lty=2, col="orange")
+    abline(h=thisISCVpropLow12, lty=2, col="orange")
+    thisISRcol = do.call("rgb", as.list(c(col2rgb("orange"))/255 * .8))
+    abline(h=thisISPCVprop12, lty=1, col=thisISRcol)
+    abline(h=thisISPCVpropHigh12, lty=2, col=thisISRcol)
+    abline(h=thisISPCVpropLow12, lty=2, col=thisISRcol)
+    abline(h=thisVCCVprop12, lty=1, col="brown")
+    abline(h=thisVCCVpropHigh12, lty=2, col="brown")
+    abline(h=thisVCCVpropLow12, lty=2, col="brown")
+    legend("topright", c("Gridded", plotTitleType, "VC", "IS", "ISP"), col=c("blue", "purple", "brown", "orange", thisISRcol), 
+           pch=c(19, NA, NA, NA, NA), lty=1)
+    dev.off()
+    
+    # bias in score of true model
+    pdf(paste0(figureFolder, type,  "_griddedBias_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=6, height=6)
+    plot(gridNs, griddedCVmeanErr, type="n", log="x", axes=FALSE, 
+         ylim=c(min(c(griddedCVmeanErr, mean(thisCVerrs))), max(griddedCVmeanErr)), 
+         xlab="Blocks per side", 
+         ylab="Bias", main=paste0("Gridded CV vs resolution (n=", n, unifTitleText, prefTitleText, twoDatTitleText, nonStatErrorTitleText, ")"))
+    axis(side=1, at=gridNs)
+    axis(side=2)
+    box()
+    lines(gridNs, griddedCVmeanErr, type="o", pch=19, col="blue")
+    abline(h=mean(thisCVerrs), lty=2, col="purple")
+    abline(h=mean(thisISCVerrs), lty=2, col="orange")
+    abline(h=mean(thisISPCVerrs), lty=2, col=thisISRcol)
+    abline(h=mean(thisVCCVerrs), lty=2, col="brown")
+    legend("topright", c("Gridded", plotTitleType, "VC", "IS", "ISP"), 
+           col=c("blue", "purple", "brown", "orange", thisISRcol), 
+           pch=c(19, NA, NA, NA, NA), lty=c(1, 2, 2, 2, 2))
+    dev.off()
+    
+    pdf(paste0(figureFolder, type,  "_griddedBiasWrong1_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=6, height=6)
+    plot(gridNs, griddedCVmeanErrWrong1, type="n", log="x", axes=FALSE, 
+         ylim=c(min(c(griddedCVmeanErrWrong1, mean(thisCVerrsWrong1))), max(griddedCVmeanErrWrong1)), 
+         xlab="Blocks per side", 
+         ylab="Bias", main=paste0("Gridded CV vs resolution (n=", n, unifTitleText, prefTitleText, twoDatTitleText, nonStatErrorTitleText, ")"))
+    axis(side=1, at=gridNs)
+    axis(side=2)
+    box()
+    lines(gridNs, griddedCVmeanErrWrong1, type="o", pch=19, col="blue")
+    abline(h=mean(thisCVerrsWrong1), lty=2, col="purple")
+    abline(h=mean(thisISCVerrsWrong1), lty=2, col="orange")
+    abline(h=mean(thisISPCVerrsWrong1), lty=2, col=thisISRcol)
+    abline(h=mean(thisVCCVerrsWrong1), lty=2, col="brown")
+    legend("topright", c("Gridded", plotTitleType, "VC", "IS", "ISP"), 
+           col=c("blue", "purple", "brown", "orange", thisISRcol), 
+           pch=c(19, NA, NA, NA, NA), lty=c(1, 2, 2, 2, 2))
+    dev.off()
+    
+    pdf(paste0(figureFolder, type,  "_griddedBiasWrong2_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=6, height=6)
+    plot(gridNs, griddedCVmeanErrWrong2, type="n", log="x", axes=FALSE, 
+         ylim=c(min(c(griddedCVmeanErrWrong2, mean(thisCVerrsWrong2))), max(griddedCVmeanErrWrong2)), 
+         xlab="Blocks per side", 
+         ylab="Bias", main=paste0("Gridded CV vs resolution (n=", n, unifTitleText, prefTitleText, twoDatTitleText, nonStatErrorTitleText, ")"))
+    axis(side=1, at=gridNs)
+    axis(side=2)
+    box()
+    lines(gridNs, griddedCVmeanErrWrong2, type="o", pch=19, col="blue")
+    abline(h=mean(thisCVerrsWrong2), lty=2, col="purple")
+    abline(h=mean(thisISCVerrsWrong2), lty=2, col="orange")
+    abline(h=mean(thisISPCVerrsWrong2), lty=2, col=thisISRcol)
+    abline(h=mean(thisVCCVerrsWrong2), lty=2, col="brown")
+    legend("topright", c("Gridded", plotTitleType, "VC", "IS", "ISP"), 
+           col=c("blue", "purple", "brown", "orange", thisISRcol), 
+           pch=c(19, NA, NA, NA, NA), lty=c(1, 2, 2, 2, 2))
+    dev.off()
+    
+    pdf(paste0(figureFolder, type,  "_griddedBiasWrong12_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=6, height=6)
+    plot(gridNs, griddedCVmeanErrWrong12, type="n", log="x", axes=FALSE, 
+         ylim=c(min(c(griddedCVmeanErrWrong12, mean(thisCVerrsWrong12))), max(griddedCVmeanErrWrong12)), 
+         xlab="Blocks per side", 
+         ylab="Bias", main=paste0("Gridded CV vs resolution (n=", n, unifTitleText, prefTitleText, twoDatTitleText, nonStatErrorTitleText, ")"))
+    axis(side=1, at=gridNs)
+    axis(side=2)
+    box()
+    lines(gridNs, griddedCVmeanErrWrong12, type="o", pch=19, col="blue")
+    abline(h=mean(thisCVerrsWrong12), lty=2, col="purple")
+    abline(h=mean(thisISCVerrsWrong12), lty=2, col="orange")
+    abline(h=mean(thisISPCVerrsWrong12), lty=2, col=thisISRcol)
+    abline(h=mean(thisVCCVerrsWrong12), lty=2, col="brown")
+    legend("topright", c("Gridded", plotTitleType, "VC", "IS", "ISP"), 
+           col=c("blue", "purple", "brown", "orange", thisISRcol), 
+           pch=c(19, NA, NA, NA, NA), lty=c(1, 2, 2, 2, 2))
+    dev.off()
+    
+    pdf(paste0(figureFolder, type,  "_griddedBiasExtrap_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=6, height=6)
+    plot(gridNs, griddedCVmeanErr, type="n", log="x", axes=FALSE, 
+         ylim=c(min(c(griddedCVmeanErr, mean(thisCVerrs))), 1+sigmaEpsSq-mean(trueMSEs)), 
+         xlab="Blocks per side", 
+         ylab="MSE Bias", main=paste0("Gridded CV vs resolution (n=", n, unifTitleText, prefTitleText, twoDatTitleText, nonStatErrorTitleText, ")"))
+    axis(side=1, at=gridNs)
+    axis(side=2)
+    box()
+    lines(gridNs, griddedCVmeanErr, type="o", pch=19, col="blue")
+    abline(h=mean(thisCVerrs), lty=2, col="purple")
+    abline(h=mean(thisISCVerrs), lty=2, col="orange")
+    abline(h=mean(thisVCCVerrs), lty=2, col="brown")
+    abline(h=0, lty=2, col="green")
+    abline(h=1+sigmaEpsSq-mean(trueMSEs), lty=2, col="red")
+    legend("right", c("Gridded", plotTitleType, "IS", "VC", "Extrapolation", "Interpolation"), 
+           col=c("blue", "purple", "orange", "brown", "red", "green"), 
+           pch=c(19, NA, NA, NA, NA, NA), lty=c(1, 2, 2, 2, 2, 2))
+    dev.off()
+    
+    # then relative/percent bias
+    pdf(paste0(figureFolder, type,  "_griddedPctBias_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=6, height=6)
+    plot(gridNs, griddedCVmeanPctErr, type="n", log="x", axes=FALSE, 
+         ylim=c(min(c(griddedCVmeanPctErr, mean(thisCVpctErrs))), max(griddedCVmeanPctErr)), 
+         xlab="Blocks per side", 
+         ylab="MSE Relative Bias (%)", main=paste0("Gridded CV vs resolution (n=", n, unifTitleText, prefTitleText, twoDatTitleText, nonStatErrorTitleText, ")"))
+    axis(side=1, at=gridNs)
+    axis(side=2)
+    box()
+    lines(gridNs, griddedCVmeanPctErr, type="o", pch=19, col="blue")
+    abline(h=mean(thisCVpctErrs), lty=2, col="purple")
+    abline(h=mean(thisISCVpctErrs), lty=2, col="orange")
+    abline(h=mean(thisVCCVpctErrs), lty=2, col="brown")
+    abline(h=0, lty=2, col="green")
+    legend("topright", c("Gridded", plotTitleType, "IS", "VC", "Truth"), col=c("blue", "purple", "orange", "brown", "green"), 
+           pch=c(19, NA, NA, NA, NA), lty=c(1, 2, 2, 2, 2))
+    dev.off()
+    
+    pdf(paste0(figureFolder, type,  "_griddedPctBiasWrong1_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=6, height=6)
+    plot(gridNs, griddedCVmeanPctErrWrong1, type="n", log="x", axes=FALSE, 
+         ylim=c(min(c(griddedCVmeanPctErrWrong1, mean(thisCVpctErrsWrong1))), max(griddedCVmeanPctErrWrong1)), 
+         xlab="Blocks per side", 
+         ylab="MSE Relative Bias (%)", main=paste0("Gridded CV vs resolution (n=", n, unifTitleText, prefTitleText, twoDatTitleText, nonStatErrorTitleText, ")"))
+    axis(side=1, at=gridNs)
+    axis(side=2)
+    box()
+    lines(gridNs, griddedCVmeanPctErrWrong1, type="o", pch=19, col="blue")
+    abline(h=mean(thisCVpctErrsWrong1), lty=2, col="purple")
+    abline(h=mean(thisISCVpctErrsWrong1), lty=2, col="orange")
+    abline(h=mean(thisVCCVpctErrsWrong1), lty=2, col="brown")
+    abline(h=0, lty=2, col="green")
+    legend("topright", c("Gridded", plotTitleType, "IS", "VC", "Truth"), col=c("blue", "purple", "orange", "brown", "green"), 
+           pch=c(19, NA, NA, NA, NA), lty=c(1, 2, 2, 2, 2))
+    dev.off()
+    
+    pdf(paste0(figureFolder, type,  "_griddedPctBiasExtrap_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=6, height=6)
+    plot(gridNs, griddedCVmeanPctErr, type="n", log="x", axes=FALSE, 
+         ylim=c(min(c(griddedCVmeanPctErr, mean(thisCVpctErrs))), 100*mean((1+sigmaEpsSq-trueMSEs)/trueMSEs)), 
+         xlab="Blocks per side", 
+         ylab="MSE Relative Bias (%)", main=paste0("Gridded CV vs resolution (n=", n, unifTitleText, prefTitleText, twoDatTitleText, nonStatErrorTitleText, ")"))
+    axis(side=1, at=gridNs)
+    axis(side=2)
+    box()
+    lines(gridNs, griddedCVmeanPctErr, type="o", pch=19, col="blue")
+    abline(h=mean(thisCVpctErrs), lty=2, col="purple")
+    abline(h=mean(thisISCVpctErrs), lty=2, col="orange")
+    abline(h=mean(thisVCCVpctErrs), lty=2, col="brown")
+    abline(h=0, lty=2, col="green")
+    abline(h=100*mean((1+sigmaEpsSq-trueMSEs)/trueMSEs), lty=2, col="red")
+    legend("right", c("Gridded", plotTitleType, "IS", "VC", "Extrapolation", "Interpolation"), 
+           col=c("blue", "purple", "orange", "brown", "red", "green"), 
+           pch=c(19, NA, NA, NA, NA, NA), lty=c(1, 2, 2, 2, 2, 2))
+    dev.off()
+    
+    # then relative bias
+    if(is.null(relTicks1)) {
+      if(n == 50) {
+        if(!unif && !twoDatasets) {
+          relTicks1 = c(.67, 1, 1.5, 2, 2.5, 3)
+          relTickLabs1 = c("0.67", "1", "1.5", "2", "2.5", "3")
+          relTicks2 = c(.67, .75, .9, 1, 1.1, 1.25, 1.5, 2, 3, 5)
+          relTickLabs2 = c("0.67", "0.75", "0.9", "1", "1.1", "1.25", "1.5", "2", "3", "5")
+        } else if(!twoDatasets) {
+          relTicks1 = c(.67, 1, 2, 3, 4)
+          relTickLabs1 = c("0.67", "1", "2", "3", "4")
+          relTicks2 = c(.67, 1, 2, 4, 6, 8)
+          relTickLabs2 = c("0.67", "1", "2", "4", "6", "8")
+        } else {
+          if(rho == -.8) {
+            relTicks1 = seq(.7, 1.5, by=.1)
+            relTickLabs1 = as.character(relTicks1)
+            relTicks2 = c(.67, .75, .9, 1, 1.1, 1.25, 1.5, 2, 3, 5)
+            relTickLabs2 = c("0.67", "0.75", "0.9", "1", "1.1", "1.25", "1.5", "2", "3", "5")
+          } else if(rho == 0) {
+            relTicks1 = seq(.7, 3, by=.1)
+            relTickLabs1 = as.character(relTicks1)
+            relTicks2 = c(.67, 1, 2, 3, 5)
+            relTickLabs2 = c("0.67", "1", "2", "3", "5")
+          } else if(rho == .8) {
+            relTicks1 = seq(.7, 1.5, by=.1)
+            relTickLabs1 = as.character(relTicks1)
+            relTicks2 = c(.67, .75, .9, 1, 1.1, 1.25, 1.5, 2, 3, 5)
+            relTickLabs2 = c("0.67", "0.75", "0.9", "1", "1.1", "1.25", "1.5", "2", "3", "5")
+          }
+          
+        }
+      } else if(n == 500) {
+        if(!unif && !twoDatasets) {
+          relTicks = c(.6, 1, 2, 5, 10, 20, 50, 100)
+          relTickLabs = c("0.6", "1", "2", "5", "10", "20", "50", "100")
+          relTicks1 = relTicks2 = relTicks
+          relTickLabs1 = relTickLabs2 = relTickLabs
+        } else if(!twoDatasets) {
+          
+        } else {
+          relTicks1 = c(.8, .9, 1, 1.1, 1.2, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5)
+          relTickLabs1 = as.character(relTicks1)
+          relTicks2 = c(.67, 1, 2, 3, 5, 10, 20, 30, 40, 50, 60)
+          relTickLabs2 = c("0.67", "1", "2", "3", "5", "10", "20", "30", "40", "50", "60")
+        }
+      } else {
+        relTicks = c(.67, 1, 2, 5, 10, 20, 50, 100)
+        relTickLabs = c("0.67", "1", "2", "5", "10", "20", "50", "100")
         relTicks1 = relTicks2 = relTicks
         relTickLabs1 = relTickLabs2 = relTickLabs
-      } else if(!twoDatasets) {
-        
-      } else {
-        relTicks1 = c(.8, .9, 1, 1.1, 1.2, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5)
-        relTickLabs1 = as.character(relTicks1)
-        relTicks2 = c(.67, 1, 2, 3, 5, 10, 20, 30, 40, 50, 60)
-        relTickLabs2 = c("0.67", "1", "2", "3", "5", "10", "20", "30", "40", "50", "60")
       }
-    } else {
-      relTicks = c(.67, 1, 2, 5, 10, 20, 50, 100)
-      relTickLabs = c("0.67", "1", "2", "5", "10", "20", "50", "100")
-      relTicks1 = relTicks2 = relTicks
-      relTickLabs1 = relTickLabs2 = relTickLabs
+    }
+    
+    
+    pdf(paste0(figureFolder, type,  "_griddedRelBias_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=6, height=6)
+    ylim = c(min(c(griddedCVmeanRelErr, mean(thisCVrelErrs))), max(griddedCVmeanRelErr))
+    plot(gridNs, griddedCVmeanRelErr, type="n", log="xy", axes=FALSE, 
+         ylim=ylim, 
+         xlab="Blocks per side", 
+         ylab="MSE Relative Bias", main=paste0("Gridded CV vs resolution (n=", n, unifTitleText, prefTitleText, twoDatTitleText, nonStatErrorTitleText, ")"))
+    axis(side=1, at=gridNs)
+    axis(side=2, at=relTicks1, labels=relTickLabs1)
+    # axis(side=2)
+    box()
+    lines(gridNs, griddedCVmeanRelErr, type="o", pch=19, col="blue")
+    abline(h=mean(thisCVrelErrs), lty=2, col="purple")
+    abline(h=mean(thisISCVrelErrs), lty=2, col="orange")
+    abline(h=mean(thisVCCVrelErrs), lty=2, col="brown")
+    abline(h=1, lty=2, col="green")
+    legend("topright", c("Gridded", plotTitleType, "IS", "VC", "Truth"), 
+           col=c("blue", "purple", "orange", "brown", "green"), 
+           pch=c(19, NA, NA, NA, NA), lty=c(1, 2, 2, 2, 2))
+    dev.off()
+    
+    pdf(paste0(figureFolder, type,  "_griddedRelBiasExtrap_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=6, height=6)
+    plot(gridNs, griddedCVmeanRelErr, type="n", log="xy", axes=FALSE, 
+         ylim=c(min(c(griddedCVmeanRelErr, mean(thisCVrelErrs))), mean((1+sigmaEpsSq)/trueMSEs)), 
+         xlab="Blocks per side", 
+         ylab="MSE Relative Bias", main=paste0("Gridded CV vs resolution (n=", n, unifTitleText, prefTitleText, twoDatTitleText, nonStatErrorTitleText, ")"))
+    axis(side=1, at=gridNs)
+    axis(side=2, at=relTicks2, labels=relTickLabs2)
+    box()
+    lines(gridNs, griddedCVmeanRelErr, type="o", pch=19, col="blue")
+    abline(h=mean(thisCVrelErrs), lty=2, col="purple")
+    abline(h=mean(thisISCVrelErrs), lty=2, col="orange")
+    abline(h=mean(thisVCCVrelErrs), lty=2, col="brown")
+    abline(h=1, lty=2, col="green")
+    abline(h=mean((1+sigmaEpsSq)/trueMSEs), lty=2, col="red")
+    legend("right", c("Gridded", plotTitleType, "IS", "VC", "Extrapolation", "Interpolation"), 
+           col=c("blue", "purple", "orange", "brown", "red", "green"), 
+           pch=c(19, NA, NA, NA, NA, NA), lty=c(1, 2, 2, 2, 2, 2))
+    dev.off()
+    
+    # Overall Score ----
+    
+    methods = c(plotTitleType, 
+                "IW", "IWR", "IWR2", 
+                "IWP", "IWRP", "IWRP2", 
+                "VC", "VCR", "VCR2", 
+                "VCP", "VCPR", "VCPR2"
+                # "CVC", "CVCP", "CVCR", "CVCR2"
+    )
+    # methods = methods[-c(match(c("this-VCP"), methods))]
+    pdf(paste0(figureFolder, type,  "_CVMSE_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=8, height=6)
+    dat = data.frame(
+      Method=factor(rep(methods, each=niter), 
+                    levels=methods, ordered=FALSE), 
+      MSE=c((thisCVs - trueMSEs)^2, 
+            (thisISCVs - trueMSEs)^2, 
+            (thisISRCVs - trueMSEs)^2, 
+            (thisISR2CVs - trueMSEs)^2, 
+            (thisISPCVs - trueMSEs)^2, 
+            (thisISPRCVs - trueMSEs)^2, 
+            (thisISPR2CVs - trueMSEs)^2, 
+            (thisVCCVs - trueMSEs)^2, 
+            (thisVCRCVs - trueMSEs)^2, 
+            (thisVCPR2CVs - trueMSEs)^2, 
+            (thisVCPCVs - trueMSEs)^2, 
+            (thisVCPRCVs - trueMSEs)^2, 
+            (thisVCPR2CVs - trueMSEs)^2
+            # (thisCVCCVs - trueMSEs)^2, 
+            # (thisCVCPCVs - trueMSEs)^2,
+            # (thisCVCRCVs - trueMSEs)^2, 
+            # (thisCVCR2CVs - trueMSEs)^2)
+      ))
+    boxplot(MSE~Method, data=dat, col="skyblue", log="y", ylab="Estimator Sq. Err.")
+    dev.off()
+    
+    # pdf(paste0(figureFolder, type,  "_CVMSEerr_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=8, height=6)
+    datac <- summarySEwithin(dat, measurevar="MSE", withinvars=c("Method"))
+    #>    Shape   ColorScheme  N     Time Time_norm       sd        se        ci
+    #> 1  Round       Colored 12 43.58333  43.58333 1.212311 0.3499639 0.7702654
+    #> 2  Round Monochromatic 12 44.58333  44.58333 1.331438 0.3843531 0.8459554
+    #> 3 Square       Colored 12 42.58333  42.58333 1.461630 0.4219364 0.9286757
+    #> 4 Square Monochromatic 12 43.58333  43.58333 1.261312 0.3641095 0.8013997
+    p = ggplot(datac, aes(x=Method, y=MSE)) +
+      geom_bar(position=position_dodge(.9), colour="black", stat="identity") +
+      geom_errorbar(position=position_dodge(.9), width=.25, aes(ymin=MSE-ci, ymax=MSE+ci)) +
+      # coord_cartesian(ylim=c(40,46)) +
+      # scale_fill_manual(values=c("#CCCCCC","#FFFFFF")) +
+      # scale_y_continuous(breaks=seq(1:100)) +
+      theme_bw()
+    # geom_hline(yintercept=38)
+    # dev.off()
+    ggsave(paste0(figureFolder, type,  "_CVMSEerr_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), p, width=8, height=6)
+    
+    pdf(paste0(figureFolder, type,  "_CVMSEWrong1_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=8, height=6)
+    dat = data.frame(
+      Method=factor(rep(methods, each=niter), 
+                    levels=methods, ordered=FALSE), 
+      MSE=c((thisCVsWrong1 - wrongMSEs1)^2, 
+            (thisISCVsWrong1 - wrongMSEs1)^2, 
+            (thisISRCVsWrong1 - wrongMSEs1)^2, 
+            (thisISR2CVsWrong1 - wrongMSEs1)^2, 
+            (thisISPCVsWrong1 - wrongMSEs1)^2, 
+            (thisISPRCVsWrong1 - wrongMSEs1)^2, 
+            (thisISPR2CVsWrong1 - wrongMSEs1)^2, 
+            (thisVCCVsWrong1 - wrongMSEs1)^2, 
+            (thisVCRCVsWrong1 - wrongMSEs1)^2, 
+            (thisVCR2CVsWrong1 - wrongMSEs1)^2, 
+            (thisVCPCVsWrong1 - wrongMSEs1)^2, 
+            (thisVCPRCVsWrong1 - wrongMSEs1)^2, 
+            (thisVCPR2CVsWrong1 - wrongMSEs1)^2
+            # (thisCVCCVsWrong1 - wrongMSEs1)^2, 
+            # (thisCVCPCVsWrong1 - wrongMSEs1)^2,
+            # (thisCVCRCVsWrong1 - wrongMSEs1)^2, 
+            # (thisCVCR2CVsWrong1 - wrongMSEs1)^2)
+      ))
+    boxplot(MSE~Method, data=dat, col="skyblue", log="y", ylab="Estimator Sq. Err.")
+    dev.off()
+    
+    # pdf(paste0(figureFolder, type,  "_CVMSEerrWrong1_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=8, height=6)
+    datac <- summarySEwithin(dat, measurevar="MSE", withinvars=c("Method"))
+    #>    Shape   ColorScheme  N     Time Time_norm       sd        se        ci
+    #> 1  Round       Colored 12 43.58333  43.58333 1.212311 0.3499639 0.7702654
+    #> 2  Round Monochromatic 12 44.58333  44.58333 1.331438 0.3843531 0.8459554
+    #> 3 Square       Colored 12 42.58333  42.58333 1.461630 0.4219364 0.9286757
+    #> 4 Square Monochromatic 12 43.58333  43.58333 1.261312 0.3641095 0.8013997
+    p = ggplot(datac, aes(x=Method, y=MSE)) +
+      geom_bar(position=position_dodge(.9), colour="black", stat="identity") +
+      geom_errorbar(position=position_dodge(.9), width=.25, aes(ymin=MSE-ci, ymax=MSE+ci)) +
+      # coord_cartesian(ylim=c(40,46)) +
+      # scale_fill_manual(values=c("#CCCCCC","#FFFFFF")) +
+      # scale_y_continuous(breaks=seq(1:100)) +
+      theme_bw()
+    # geom_hline(yintercept=38)
+    # dev.off()
+    ggsave(paste0(figureFolder, type,  "_CVMSEerrWrong1_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), p, width=8, height=6)
+    
+    pdf(paste0(figureFolder, type,  "_CVMSEWrong2_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=8, height=6)
+    dat = data.frame(
+      Method=factor(rep(methods, each=niter), 
+                    levels=methods, ordered=FALSE), 
+      MSE=c((thisCVsWrong2 - wrongMSEs2)^2, 
+            (thisISCVsWrong2 - wrongMSEs2)^2, 
+            (thisISRCVsWrong2 - wrongMSEs2)^2, 
+            (thisISR2CVsWrong2 - wrongMSEs2)^2, 
+            (thisISPCVsWrong2 - wrongMSEs2)^2, 
+            (thisISPRCVsWrong2 - wrongMSEs2)^2, 
+            (thisISPR2CVsWrong2 - wrongMSEs2)^2, 
+            (thisVCCVsWrong2 - wrongMSEs2)^2, 
+            (thisVCRCVsWrong2 - wrongMSEs2)^2, 
+            (thisVCR2CVsWrong2 - wrongMSEs2)^2, 
+            (thisVCPCVsWrong2 - wrongMSEs2)^2, 
+            (thisVCPRCVsWrong2 - wrongMSEs2)^2, 
+            (thisVCPR2CVsWrong2 - wrongMSEs2)^2
+            # (thisCVCCVsWrong2 - wrongMSEs2)^2, 
+            # (thisCVCPCVsWrong2 - wrongMSEs2)^2,
+            # (thisCVCRCVsWrong2 - wrongMSEs2)^2, 
+            # (thisCVCR2CVsWrong2 - wrongMSEs2)^2)
+      ))
+    boxplot(MSE~Method, data=dat, col="skyblue", log="y", ylab="Estimator Sq. Err.")
+    dev.off()
+    
+    # pdf(paste0(figureFolder, type,  "_CVMSEerrWrong2_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=8, height=6)
+    datac <- summarySEwithin(dat, measurevar="MSE", withinvars=c("Method"))
+    #>    Shape   ColorScheme  N     Time Time_norm       sd        se        ci
+    #> 1  Round       Colored 12 43.58333  43.58333 1.212311 0.3499639 0.7702654
+    #> 2  Round Monochromatic 12 44.58333  44.58333 1.331438 0.3843531 0.8459554
+    #> 3 Square       Colored 12 42.58333  42.58333 1.461630 0.4219364 0.9286757
+    #> 4 Square Monochromatic 12 43.58333  43.58333 1.261312 0.3641095 0.8013997
+    p = ggplot(datac, aes(x=Method, y=MSE)) +
+      geom_bar(position=position_dodge(.9), colour="black", stat="identity") +
+      geom_errorbar(position=position_dodge(.9), width=.25, aes(ymin=MSE-ci, ymax=MSE+ci)) +
+      # coord_cartesian(ylim=c(40,46)) +
+      # scale_fill_manual(values=c("#CCCCCC","#FFFFFF")) +
+      # scale_y_continuous(breaks=seq(1:100)) +
+      theme_bw()
+    # geom_hline(yintercept=38)
+    # dev.off()
+    ggsave(paste0(figureFolder, type,  "_CVMSEerrWrong2_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), p, width=8, height=6)
+    
+    pdf(paste0(figureFolder, type,  "_CVMSEWrong12_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=8, height=6)
+    dat = data.frame(
+      Method=factor(rep(methods, each=niter), 
+                    levels=methods, ordered=FALSE), 
+      MSE=c((thisCVsWrong1 - thisCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
+            (thisISCVsWrong1 - thisISCVsWrong1 - (wrongMSEs1 - wrongMSEs2))^2, 
+            (thisISRCVsWrong1 - thisISRCVsWrong1 - (wrongMSEs1 - wrongMSEs2))^2, 
+            (thisISR2CVsWrong1 - thisISR2CVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
+            (thisISPCVsWrong1 - thisISPCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
+            (thisISPRCVsWrong1 - thisISPRCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
+            (thisISPR2CVsWrong1 - thisISPR2CVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
+            (thisVCCVsWrong1 - thisVCCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
+            (thisVCRCVsWrong1 - thisVCRCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
+            (thisVCR2CVsWrong1 - thisVCR2CVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
+            (thisVCPCVsWrong1 - thisVCPCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
+            (thisVCPRCVsWrong1 - thisVCPRCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
+            (thisVCPR2CVsWrong1 - thisVCPR2CVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2
+            # (thisCVCCVsWrong1 - thisCVCCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
+            # (thisCVCPCVsWrong1 - thisCVCPCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2,
+            # (thisCVCRCVsWrong1 - thisCVCRCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
+            # (thisCVCR2CVsWrong1 - thisCVCR2CVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2)
+      ))
+    boxplot(MSE~Method, data=dat, col="skyblue", log="y", ylab="Estimator Sq. Err.")
+    dev.off()
+    
+    # pdf(paste0(figureFolder, type,  "_CVMSEerrWrong12_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=8, height=6)
+    datac <- summarySEwithin(dat, measurevar="MSE", withinvars=c("Method"))
+    #>    Shape   ColorScheme  N     Time Time_norm       sd        se        ci
+    #> 1  Round       Colored 12 43.58333  43.58333 1.212311 0.3499639 0.7702654
+    #> 2  Round Monochromatic 12 44.58333  44.58333 1.331438 0.3843531 0.8459554
+    #> 3 Square       Colored 12 42.58333  42.58333 1.461630 0.4219364 0.9286757
+    #> 4 Square Monochromatic 12 43.58333  43.58333 1.261312 0.3641095 0.8013997
+    p = ggplot(datac, aes(x=Method, y=MSE)) +
+      geom_bar(position=position_dodge(.9), colour="black", stat="identity") +
+      geom_errorbar(position=position_dodge(.9), width=.25, aes(ymin=MSE-ci, ymax=MSE+ci)) +
+      # coord_cartesian(ylim=c(40,46)) +
+      # scale_fill_manual(values=c("#CCCCCC","#FFFFFF")) +
+      # scale_y_continuous(breaks=seq(1:100)) +
+      theme_bw()
+    # geom_hline(yintercept=38)
+    # dev.off()
+    ggsave(paste0(figureFolder, type,  "_CVMSEerrWrong12_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), p, width=8, height=6)
+    
+    pdf(paste0(figureFolder, type,  "_CVMRE_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=6, height=6)
+    dat = data.frame(
+      Method=rep(c(plotTitleType, "IW", "VC", "IWR"), each=n), 
+      sqResids=c(thisCVs/trueMSEs, 
+                 thisISCVs/trueMSEs, 
+                 thisVCCVs/trueMSEs, 
+                 thisISRCVs/trueMSEs))
+    boxplot(sqResids~Method, data=dat, log="y", col="skyblue", ylab="Estimator Rel. Err.")
+    dev.off()
+    
+    pdf(paste0(figureFolder, type,  "_CVMSE_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=8, height=6)
+    dat = data.frame(
+      Method=factor(rep(c(plotTitleType, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), each=niter), 
+                    levels=c(plotTitleType, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), ordered=FALSE), 
+      MSE=c((thisCVs - trueMSEs)^2, 
+            (thisISCVs - trueMSEs)^2, 
+            (thisISPCVs - trueMSEs)^2, 
+            (thisISPR2CVs - trueMSEs)^2, 
+            (thisVCCVs - trueMSEs)^2, 
+            (thisVCRCVs - trueMSEs)^2, 
+            (thisVCR2CVs - trueMSEs)^2, 
+            (thisVCPCVs - trueMSEs)^2, 
+            (thisVCPRCVs - trueMSEs)^2, 
+            (thisVCPR2CVs - trueMSEs)^2))
+    boxplot(MSE~Method, data=dat, col="skyblue", log="y", ylab="Estimator Sq. Err.")
+    dev.off()
+    
+    
+    # pdf(paste0(figureFolder, type,  "_selProbErr_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=8, height=6)
+    dat = data.frame(
+      Method=factor(rep(c(plotTitleType, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), each=niter), 
+                    levels=c(plotTitleType, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), ordered=FALSE), 
+      Probability=c((thisCVs - thisCVsWrong1 < 0) & (thisCVs - thisCVsWrong2 < 0), 
+                    (thisISCVs - thisISCVsWrong1 < 0) & (thisISCVs - thisISCVsWrong2 < 0), 
+                    (thisISPCVs - thisISPCVsWrong1 < 0) & (thisISPCVs - thisISPCVsWrong2 < 0), 
+                    (thisISPR2CVs - thisISPR2CVsWrong1 < 0) & (thisISPR2CVs - thisISPR2CVsWrong2 < 0), 
+                    (thisVCCVs - thisVCCVsWrong1 < 0) & (thisVCCVs - thisVCCVsWrong2 < 0), 
+                    (thisVCRCVs - thisVCRCVsWrong1 < 0) & (thisVCRCVs - thisVCRCVsWrong2 < 0), 
+                    (thisVCR2CVs - thisVCR2CVsWrong1 < 0) & (thisVCR2CVs - thisVCR2CVsWrong2 < 0), 
+                    (thisVCPCVs - thisVCPCVsWrong1 < 0) & (thisVCPCVs - thisVCPCVsWrong2 < 0), 
+                    (thisVCPRCVs - thisVCPRCVsWrong1 < 0) & (thisVCPRCVs - thisVCPRCVsWrong2 < 0), 
+                    (thisVCPR2CVs - thisVCPR2CVsWrong1 < 0) & (thisVCPR2CVs - thisVCPR2CVsWrong2 < 0)))
+    datac <- summarySEwithin(dat, measurevar="Probability", withinvars=c("Method"))
+    #>    Shape   ColorScheme  N     Time Time_norm       sd        se        ci
+    #> 1  Round       Colored 12 43.58333  43.58333 1.212311 0.3499639 0.7702654
+    #> 2  Round Monochromatic 12 44.58333  44.58333 1.331438 0.3843531 0.8459554
+    #> 3 Square       Colored 12 42.58333  42.58333 1.461630 0.4219364 0.9286757
+    #> 4 Square Monochromatic 12 43.58333  43.58333 1.261312 0.3641095 0.8013997
+    p = ggplot(datac, aes(x=Method, y=Probability)) +
+      geom_bar(position=position_dodge(.9), colour="black", stat="identity") +
+      geom_errorbar(position=position_dodge(.9), width=.25, aes(ymin=Probability-ci, ymax=Probability+ci)) +
+      # coord_cartesian(ylim=c(40,46)) +
+      # scale_fill_manual(values=c("#CCCCCC","#FFFFFF")) +
+      # scale_y_continuous(breaks=seq(1:100)) +
+      theme_bw()
+    # geom_hline(yintercept=38)
+    # dev.off()
+    ggsave(paste0(figureFolder, type,  "_selProbErr_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), p, width=8, height=6)
+    
+    # pdf(paste0(figureFolder, type,  "_selProbErr12_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=8, height=6)
+    dat = data.frame(
+      Method=factor(rep(c(plotTitleType, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), each=niter), 
+                    levels=c(plotTitleType, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), ordered=FALSE), 
+      Probability=c((thisCVsWrong1 < thisCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                    (thisISCVsWrong1 < thisISCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                    (thisISPCVsWrong1 < thisISPCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                    (thisISPR2CVsWrong1 < thisISPR2CVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                    (thisVCCVsWrong1 < thisVCCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                    (thisVCRCVsWrong1 < thisVCRCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                    (thisVCR2CVsWrong1 < thisVCR2CVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                    (thisVCPCVsWrong1 < thisVCPCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                    (thisVCPRCVsWrong1 < thisVCPRCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                    (thisVCPR2CVsWrong1 < thisVCPR2CVsWrong2) == (wrongMSEs1 < wrongMSEs2)))
+    datac <- summarySEwithin(dat, measurevar="Probability", withinvars=c("Method"))
+    #>    Shape   ColorScheme  N     Time Time_norm       sd        se        ci
+    #> 1  Round       Colored 12 43.58333  43.58333 1.212311 0.3499639 0.7702654
+    #> 2  Round Monochromatic 12 44.58333  44.58333 1.331438 0.3843531 0.8459554
+    #> 3 Square       Colored 12 42.58333  42.58333 1.461630 0.4219364 0.9286757
+    #> 4 Square Monochromatic 12 43.58333  43.58333 1.261312 0.3641095 0.8013997
+    p = ggplot(datac, aes(x=Method, y=Probability)) +
+      geom_bar(position=position_dodge(.9), colour="black", stat="identity") +
+      geom_errorbar(position=position_dodge(.9), width=.25, aes(ymin=Probability-ci, ymax=Probability+ci)) +
+      # coord_cartesian(ylim=c(40,46)) +
+      # scale_fill_manual(values=c("#CCCCCC","#FFFFFF")) +
+      # scale_y_continuous(breaks=seq(1:100)) +
+      theme_bw()
+    # geom_hline(yintercept=38)
+    # dev.off()
+    ggsave(paste0(figureFolder, type,  "_selProbErr12_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), p, width=8, height=6)
+    
+    browser()
+    
+    if(FALSE) {
+      print(paste0("MSE of CV: ", mean((thisCVs - trueMSEs)^2)))
+      print(paste0("MSE of thisIS: ", mean((thisISCVs - trueMSEs)^2)))
+      print(paste0("MSE of thisISR: ", mean((thisISRCVs - trueMSEs)^2)))
+      print(paste0("MSE of thisISR: ", mean((thisISR2CVs - trueMSEs)^2)))
+      print(paste0("MSE of thisISP: ", mean((thisISPCVs - trueMSEs)^2)))
+      print(paste0("MSE of thisISPR: ", mean((thisISPRCVs - trueMSEs)^2)))
+      print(paste0("MSE of thisISPR: ", mean((thisISPR2CVs - trueMSEs)^2)))
+      print(paste0("MSE of thisVC: ", mean((thisVCCVs - trueMSEs)^2)))
+      
+      print(paste0("MAE of CV: ", mean(abs(thisCVs - trueMSEs))))
+      print(paste0("MAE of thisIS: ", mean(abs(thisISCVs - trueMSEs))))
+      print(paste0("MAE of thisVC: ", mean(abs(thisVCCVs - trueMSEs))))
+      
+      print(paste0("MRE of CV: ", mean(thisCVs/trueMSEs)))
+      print(paste0("MRE of thisIS: ", mean(thisISCVs/trueMSEs)))
+      print(paste0("MRE of thisVC: ", mean(thisVCCVs/trueMSEs)))
+      
+      print(paste0("MAPE of CV: ", 100*mean(abs(thisCVs/trueMSEs-1))))
+      print(paste0("MAPE of thisIS: ", 100*mean(abs(thisISCVs/trueMSEs-1))))
+      print(paste0("MAPE of thisVC: ", 100*mean(abs(thisVCCVs/trueMSEs-1))))
+      
+      print(paste0("MPE of CV: ", 100*mean(thisCVs/trueMSEs-1)))
+      print(paste0("MPE of thisIS: ", 100*mean(thisISCVs/trueMSEs-1)))
+      print(paste0("MPE of thisVC: ", 100*mean(thisVCCVs/trueMSEs-1)))
+      
+      # n = 50:
+      # [1] "MSE of LOO: 0.0186379406422529"
+      # [1] "MSE of LOOIS: 0.0170571022906853"
+      # [1] "MSE of LOOVC: 0.0139447206201104"
+      
+      # [1] "MAE of LOO: 0.100422072993674"
+      # [1] "MAE of LOOIS: 0.0960316894688946"
+      # [1] "MAE of LOOVC: 0.0845123591858342"
+      
+      # [1] "MRE of LOO: 0.671353940243741"
+      # [1] "MRE of LOOIS: 0.985694537527453"
+      # [1] "MRE of LOOVC: 1.12418200931857"
+      
+      # [1] "MAPE of LOO: 44.4496728924345"
+      # [1] "MAPE of LOOIS: 47.7788979101375"
+      # [1] "MAPE of LOOVC: 43.8697950279161"
+      
+      # [1] "MPE of LOO: -32.8646059756259"
+      # [1] "MPE of LOOIS: -1.43054624725475"
+      # [1] "MPE of LOOVC: 12.4182009318574"
+      
+      # n=500:
+      # [1] "MSE of LOO: 0.000287803463307309"
+      # [1] "MSE of LOOIS: 9.96587931614364e-05"
+      # [1] "MSE of LOOVC: 0.000124932796730299"
+      
+      # [1] "MAE of LOO: 0.0129249857160369"
+      # [1] "MAE of LOOIS: 0.00770617706114003"
+      # [1] "MAE of LOOVC: 0.00860390665295181"
+      
+      # [1] "MRE of LOO: 0.594394496022479"
+      # [1] "MRE of LOOIS: 1.1115313438249"
+      # [1] "MRE of LOOVC: 1.25960186604909"
+      
+      # [1] "MAPE of LOO: 40.8130559620157"
+      # [1] "MAPE of LOOIS: 27.8996173768934"
+      # [1] "MAPE of LOOVC: 34.7072374564929"
+      
+      # [1] "MPE of LOO: -40.5605503977521"
+      # [1] "MPE of LOOIS: 11.1531343824896"
+      # [1] "MPE of LOOVC: 25.9601866049089"
     }
   }
   
-  # browser()
   
-  pdf(paste0(figureFolder, "griddedRelBias_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=6, height=6)
-  ylim = c(min(c(griddedCVmeanRelErr, mean(LOOCVrelErrs))), max(griddedCVmeanRelErr))
-  plot(gridNs, griddedCVmeanRelErr, type="n", log="xy", axes=FALSE, 
-       ylim=ylim, 
-       xlab="Blocks per side", 
-       ylab="MSE Relative Bias", main=paste0("Gridded CV vs resolution (n=", n, unifTitleText, prefTitleText, twoDatTitleText, nonStatErrorTitleText, ")"))
-  axis(side=1, at=gridNs)
-  axis(side=2, at=relTicks1, labels=relTickLabs1)
-  # axis(side=2)
-  box()
-  lines(gridNs, griddedCVmeanRelErr, type="o", pch=19, col="blue")
-  abline(h=mean(LOOCVrelErrs), lty=2, col="purple")
-  abline(h=mean(LOOISCVrelErrs), lty=2, col="orange")
-  abline(h=mean(LOOVCCVrelErrs), lty=2, col="brown")
-  abline(h=1, lty=2, col="green")
-  legend("topright", c("Gridded", "LOO", "LOOIS", "LOOVC", "Truth"), 
-         col=c("blue", "purple", "orange", "brown", "green"), 
-         pch=c(19, NA, NA, NA, NA), lty=c(1, 2, 2, 2, 2))
-  dev.off()
-  
-  pdf(paste0(figureFolder, "griddedRelBiasExtrap_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=6, height=6)
-  plot(gridNs, griddedCVmeanRelErr, type="n", log="xy", axes=FALSE, 
-       ylim=c(min(c(griddedCVmeanRelErr, mean(LOOCVrelErrs))), mean((1+sigmaEpsSq)/trueMSEs)), 
-       xlab="Blocks per side", 
-       ylab="MSE Relative Bias", main=paste0("Gridded CV vs resolution (n=", n, unifTitleText, prefTitleText, twoDatTitleText, nonStatErrorTitleText, ")"))
-  axis(side=1, at=gridNs)
-  axis(side=2, at=relTicks2, labels=relTickLabs2)
-  box()
-  lines(gridNs, griddedCVmeanRelErr, type="o", pch=19, col="blue")
-  abline(h=mean(LOOCVrelErrs), lty=2, col="purple")
-  abline(h=mean(LOOISCVrelErrs), lty=2, col="orange")
-  abline(h=mean(LOOVCCVrelErrs), lty=2, col="brown")
-  abline(h=1, lty=2, col="green")
-  abline(h=mean((1+sigmaEpsSq)/trueMSEs), lty=2, col="red")
-  legend("right", c("Gridded", "LOO", "LOOIS", "LOOVC", "Extrapolation", "Interpolation"), 
-         col=c("blue", "purple", "orange", "brown", "red", "green"), 
-         pch=c(19, NA, NA, NA, NA, NA), lty=c(1, 2, 2, 2, 2, 2))
-  dev.off()
-  
-  # Overall Score ----
-  # browser()
-  methods = c("LOO", 
-              "LOO-IW", "LOO-IWR", "LOO-IWR2", 
-              "LOO-IWP", "LOO-IWRP", "LOO-IWRP2", 
-              "LOO-VC", "LOO-VCR", "LOO-VCR2"
-              # "LOO-VCP"
-              # "LOO-CVC", "LOO-CVCP", "LOO-CVCR", "LOO-CVCR2"
-  )
-  # methods = methods[-c(match(c("LOO-VCP"), methods))]
-  pdf(paste0(figureFolder, "CVMSE_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=8, height=6)
-  dat = data.frame(
-    Method=factor(rep(methods, each=niter), 
-                  levels=methods, ordered=FALSE), 
-    MSE=c((LOOCVs - trueMSEs)^2, 
-          (LOOISCVs - trueMSEs)^2, 
-          (LOOISRCVs - trueMSEs)^2, 
-          (LOOISR2CVs - trueMSEs)^2, 
-          (LOOISPCVs - trueMSEs)^2, 
-          (LOOISPRCVs - trueMSEs)^2, 
-          (LOOISPR2CVs - trueMSEs)^2, 
-          (LOOVCCVs - trueMSEs)^2, 
-          (LOOVCRCVs - trueMSEs)^2, 
-          (LOOVCR2CVs - trueMSEs)^2
-          # (LOOVCPCVs - trueMSEs)^2, 
-          # (LOOCVCCVs - trueMSEs)^2, 
-          # (LOOCVCPCVs - trueMSEs)^2,
-          # (LOOCVCRCVs - trueMSEs)^2, 
-          # (LOOCVCR2CVs - trueMSEs)^2)
-    ))
-  boxplot(MSE~Method, data=dat, col="skyblue", log="y", ylab="Estimator Sq. Err.")
-  dev.off()
-  
-  pdf(paste0(figureFolder, "CVMSEerr_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=8, height=6)
-  datac <- summarySEwithin(dat, measurevar="MSE", withinvars=c("Method"))
-  #>    Shape   ColorScheme  N     Time Time_norm       sd        se        ci
-  #> 1  Round       Colored 12 43.58333  43.58333 1.212311 0.3499639 0.7702654
-  #> 2  Round Monochromatic 12 44.58333  44.58333 1.331438 0.3843531 0.8459554
-  #> 3 Square       Colored 12 42.58333  42.58333 1.461630 0.4219364 0.9286757
-  #> 4 Square Monochromatic 12 43.58333  43.58333 1.261312 0.3641095 0.8013997
-  ggplot(datac, aes(x=Method, y=MSE)) +
-    geom_bar(position=position_dodge(.9), colour="black", stat="identity") +
-    geom_errorbar(position=position_dodge(.9), width=.25, aes(ymin=MSE-ci, ymax=MSE+ci)) +
-    # coord_cartesian(ylim=c(40,46)) +
-    # scale_fill_manual(values=c("#CCCCCC","#FFFFFF")) +
-    # scale_y_continuous(breaks=seq(1:100)) +
-    theme_bw()
-    # geom_hline(yintercept=38)
-  dev.off()
-  
-  pdf(paste0(figureFolder, "CVMSEWrong1_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=8, height=6)
-  dat = data.frame(
-    Method=factor(rep(methods, each=niter), 
-                  levels=methods, ordered=FALSE), 
-    MSE=c((LOOCVsWrong1 - wrongMSEs1)^2, 
-          (LOOISCVsWrong1 - wrongMSEs1)^2, 
-          (LOOISRCVsWrong1 - wrongMSEs1)^2, 
-          (LOOISR2CVsWrong1 - wrongMSEs1)^2, 
-          (LOOISPCVsWrong1 - wrongMSEs1)^2, 
-          (LOOISPRCVsWrong1 - wrongMSEs1)^2, 
-          (LOOISPR2CVsWrong1 - wrongMSEs1)^2, 
-          (LOOVCCVsWrong1 - wrongMSEs1)^2, 
-          (LOOVCRCVsWrong1 - wrongMSEs1)^2, 
-          (LOOVCR2CVsWrong1 - wrongMSEs1)^2
-          # (LOOVCPCVsWrong1 - wrongMSEs1)^2, 
-          # (LOOCVCCVsWrong1 - wrongMSEs1)^2, 
-          # (LOOCVCPCVsWrong1 - wrongMSEs1)^2,
-          # (LOOCVCRCVsWrong1 - wrongMSEs1)^2, 
-          # (LOOCVCR2CVsWrong1 - wrongMSEs1)^2)
-    ))
-  boxplot(MSE~Method, data=dat, col="skyblue", log="y", ylab="Estimator Sq. Err.")
-  dev.off()
-  
-  pdf(paste0(figureFolder, "CVMSEerrWrong1_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=8, height=6)
-  datac <- summarySEwithin(dat, measurevar="MSE", withinvars=c("Method"))
-  #>    Shape   ColorScheme  N     Time Time_norm       sd        se        ci
-  #> 1  Round       Colored 12 43.58333  43.58333 1.212311 0.3499639 0.7702654
-  #> 2  Round Monochromatic 12 44.58333  44.58333 1.331438 0.3843531 0.8459554
-  #> 3 Square       Colored 12 42.58333  42.58333 1.461630 0.4219364 0.9286757
-  #> 4 Square Monochromatic 12 43.58333  43.58333 1.261312 0.3641095 0.8013997
-  ggplot(datac, aes(x=Method, y=MSE)) +
-    geom_bar(position=position_dodge(.9), colour="black", stat="identity") +
-    geom_errorbar(position=position_dodge(.9), width=.25, aes(ymin=MSE-ci, ymax=MSE+ci)) +
-    # coord_cartesian(ylim=c(40,46)) +
-    # scale_fill_manual(values=c("#CCCCCC","#FFFFFF")) +
-    # scale_y_continuous(breaks=seq(1:100)) +
-    theme_bw()
-  # geom_hline(yintercept=38)
-  dev.off()
-  
-  pdf(paste0(figureFolder, "CVMSEWrong2_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=8, height=6)
-  dat = data.frame(
-    Method=factor(rep(methods, each=niter), 
-                  levels=methods, ordered=FALSE), 
-    MSE=c((LOOCVsWrong2 - wrongMSEs2)^2, 
-          (LOOISCVsWrong2 - wrongMSEs2)^2, 
-          (LOOISRCVsWrong2 - wrongMSEs2)^2, 
-          (LOOISR2CVsWrong2 - wrongMSEs2)^2, 
-          (LOOISPCVsWrong2 - wrongMSEs2)^2, 
-          (LOOISPRCVsWrong2 - wrongMSEs2)^2, 
-          (LOOISPR2CVsWrong2 - wrongMSEs2)^2, 
-          (LOOVCCVsWrong2 - wrongMSEs2)^2, 
-          (LOOVCRCVsWrong2 - wrongMSEs2)^2, 
-          (LOOVCR2CVsWrong2 - wrongMSEs2)^2
-          # (LOOVCPCVsWrong2 - wrongMSEs2)^2, 
-          # (LOOCVCCVsWrong2 - wrongMSEs2)^2, 
-          # (LOOCVCPCVsWrong2 - wrongMSEs2)^2,
-          # (LOOCVCRCVsWrong2 - wrongMSEs2)^2, 
-          # (LOOCVCR2CVsWrong2 - wrongMSEs2)^2)
-    ))
-  boxplot(MSE~Method, data=dat, col="skyblue", log="y", ylab="Estimator Sq. Err.")
-  dev.off()
-  
-  pdf(paste0(figureFolder, "CVMSEerrWrong2_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=8, height=6)
-  datac <- summarySEwithin(dat, measurevar="MSE", withinvars=c("Method"))
-  #>    Shape   ColorScheme  N     Time Time_norm       sd        se        ci
-  #> 1  Round       Colored 12 43.58333  43.58333 1.212311 0.3499639 0.7702654
-  #> 2  Round Monochromatic 12 44.58333  44.58333 1.331438 0.3843531 0.8459554
-  #> 3 Square       Colored 12 42.58333  42.58333 1.461630 0.4219364 0.9286757
-  #> 4 Square Monochromatic 12 43.58333  43.58333 1.261312 0.3641095 0.8013997
-  ggplot(datac, aes(x=Method, y=MSE)) +
-    geom_bar(position=position_dodge(.9), colour="black", stat="identity") +
-    geom_errorbar(position=position_dodge(.9), width=.25, aes(ymin=MSE-ci, ymax=MSE+ci)) +
-    # coord_cartesian(ylim=c(40,46)) +
-    # scale_fill_manual(values=c("#CCCCCC","#FFFFFF")) +
-    # scale_y_continuous(breaks=seq(1:100)) +
-    theme_bw()
-  # geom_hline(yintercept=38)
-  dev.off()
-  
-  pdf(paste0(figureFolder, "CVMSEWrong12_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=8, height=6)
-  dat = data.frame(
-    Method=factor(rep(methods, each=niter), 
-                  levels=methods, ordered=FALSE), 
-    MSE=c((LOOCVsWrong1 - LOOCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
-          (LOOISCVsWrong1 - LOOISCVsWrong1 - (wrongMSEs1 - wrongMSEs2))^2, 
-          (LOOISRCVsWrong1 - LOOISRCVsWrong1 - (wrongMSEs1 - wrongMSEs2))^2, 
-          (LOOISR2CVsWrong1 - LOOISR2CVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
-          (LOOISPCVsWrong1 - LOOISPCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
-          (LOOISPRCVsWrong1 - LOOISPRCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
-          (LOOISPR2CVsWrong1 - LOOISPR2CVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
-          (LOOVCCVsWrong1 - LOOVCCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
-          (LOOVCRCVsWrong1 - LOOVCRCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
-          (LOOVCR2CVsWrong1 - LOOVCR2CVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2
-          # (LOOVCPCVsWrong1 - LOOVCPCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
-          # (LOOCVCCVsWrong1 - LOOCVCCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
-          # (LOOCVCPCVsWrong1 - LOOCVCPCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2,
-          # (LOOCVCRCVsWrong1 - LOOCVCRCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
-          # (LOOCVCR2CVsWrong1 - LOOCVCR2CVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2)
-    ))
-  boxplot(MSE~Method, data=dat, col="skyblue", log="y", ylab="Estimator Sq. Err.")
-  dev.off()
-  
-  pdf(paste0(figureFolder, "CVMSEerrWrong12_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=8, height=6)
-  datac <- summarySEwithin(dat, measurevar="MSE", withinvars=c("Method"))
-  #>    Shape   ColorScheme  N     Time Time_norm       sd        se        ci
-  #> 1  Round       Colored 12 43.58333  43.58333 1.212311 0.3499639 0.7702654
-  #> 2  Round Monochromatic 12 44.58333  44.58333 1.331438 0.3843531 0.8459554
-  #> 3 Square       Colored 12 42.58333  42.58333 1.461630 0.4219364 0.9286757
-  #> 4 Square Monochromatic 12 43.58333  43.58333 1.261312 0.3641095 0.8013997
-  ggplot(datac, aes(x=Method, y=MSE)) +
-    geom_bar(position=position_dodge(.9), colour="black", stat="identity") +
-    geom_errorbar(position=position_dodge(.9), width=.25, aes(ymin=MSE-ci, ymax=MSE+ci)) +
-    # coord_cartesian(ylim=c(40,46)) +
-    # scale_fill_manual(values=c("#CCCCCC","#FFFFFF")) +
-    # scale_y_continuous(breaks=seq(1:100)) +
-    theme_bw()
-  # geom_hline(yintercept=38)
-  dev.off()
-  
-  pdf(paste0(figureFolder, "CVMRE_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=6, height=6)
-  dat = data.frame(
-    Method=rep(c("LOO", "LOO-IW", "LOO-VC", "LOO-ISR"), each=n), 
-    sqResids=c(LOOCVs/trueMSEs, 
-               LOOISCVs/trueMSEs, 
-               LOOVCCVs/trueMSEs, 
-               LOOISRCVs/trueMSEs))
-  boxplot(sqResids~Method, data=dat, log="y", col="skyblue", ylab="Estimator Rel. Err.")
-  dev.off()
-  
-  pdf(paste0(figureFolder, "CVMSE_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=8, height=6)
-  dat = data.frame(
-    Method=factor(rep(c("LOO", "LOO-IW", "LOO-IWP", "LOO-IWPR2", "LOO-VC", "LOO-VCR", "LOO-VCR2"), each=niter), 
-                  levels=c("LOO", "LOO-IW", "LOO-IWP", "LOO-IWPR2", "LOO-VC", "LOO-VCR", "LOO-VCR2"), ordered=FALSE), 
-    MSE=c((LOOCVs - trueMSEs)^2, 
-          (LOOISCVs - trueMSEs)^2, 
-          (LOOISPCVs - trueMSEs)^2, 
-          (LOOISPR2CVs - trueMSEs)^2, 
-          (LOOVCCVs - trueMSEs)^2, 
-          (LOOVCRCVs - trueMSEs)^2, 
-          (LOOVCR2CVs - trueMSEs)^2))
-  boxplot(MSE~Method, data=dat, col="skyblue", log="y", ylab="Estimator Sq. Err.")
-  dev.off()
-  
-  # browser()
-  
-  pdf(paste0(figureFolder, "selProbErr_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=8, height=6)
-  dat = data.frame(
-    Method=factor(rep(c("LOO", "LOO-IW", "LOO-IWP", "LOO-IWPR2", "LOO-VC", "LOO-VCR", "LOO-VCR2"), each=niter), 
-                  levels=c("LOO", "LOO-IW", "LOO-IWP", "LOO-IWPR2", "LOO-VC", "LOO-VCR", "LOO-VCR2"), ordered=FALSE), 
-    Probability=c((LOOCVs - LOOCVsWrong1 < 0) & (LOOCVs - LOOCVsWrong2 < 0), 
-          (LOOISCVs - LOOISCVsWrong1 < 0) & (LOOISCVs - LOOISCVsWrong2 < 0), 
-          (LOOISPCVs - LOOISPCVsWrong1 < 0) & (LOOISPCVs - LOOISPCVsWrong2 < 0), 
-          (LOOISPR2CVs - LOOISPR2CVsWrong1 < 0) & (LOOISPR2CVs - LOOISPR2CVsWrong2 < 0), 
-          (LOOVCCVs - LOOVCCVsWrong1 < 0) & (LOOVCCVs - LOOVCCVsWrong2 < 0), 
-          (LOOVCRCVs - LOOVCRCVsWrong1 < 0) & (LOOVCRCVs - LOOVCRCVsWrong2 < 0), 
-          (LOOVCR2CVs - LOOVCR2CVsWrong1 < 0) & (LOOVCR2CVs - LOOVCR2CVsWrong2 < 0)))
-  datac <- summarySEwithin(dat, measurevar="Probability", withinvars=c("Method"))
-  #>    Shape   ColorScheme  N     Time Time_norm       sd        se        ci
-  #> 1  Round       Colored 12 43.58333  43.58333 1.212311 0.3499639 0.7702654
-  #> 2  Round Monochromatic 12 44.58333  44.58333 1.331438 0.3843531 0.8459554
-  #> 3 Square       Colored 12 42.58333  42.58333 1.461630 0.4219364 0.9286757
-  #> 4 Square Monochromatic 12 43.58333  43.58333 1.261312 0.3641095 0.8013997
-  ggplot(datac, aes(x=Method, y=Probability)) +
-    geom_bar(position=position_dodge(.9), colour="black", stat="identity") +
-    geom_errorbar(position=position_dodge(.9), width=.25, aes(ymin=Probability-ci, ymax=Probability+ci)) +
-    # coord_cartesian(ylim=c(40,46)) +
-    # scale_fill_manual(values=c("#CCCCCC","#FFFFFF")) +
-    # scale_y_continuous(breaks=seq(1:100)) +
-    theme_bw()
-  # geom_hline(yintercept=38)
-  dev.off()
-  
-  pdf(paste0(figureFolder, "selProbErr12_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=8, height=6)
-  dat = data.frame(
-    Method=factor(rep(c("LOO", "LOO-IW", "LOO-IWP", "LOO-IWPR2", "LOO-VC", "LOO-VCR", "LOO-VCR2"), each=niter), 
-                  levels=c("LOO", "LOO-IW", "LOO-IWP", "LOO-IWPR2", "LOO-VC", "LOO-VCR", "LOO-VCR2"), ordered=FALSE), 
-    Probability=c((LOOCVsWrong1 < LOOCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
-                  (LOOISCVsWrong1 < LOOISCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
-                  (LOOISPCVsWrong1 < LOOISPCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
-                  (LOOISPR2CVsWrong1 < LOOISPR2CVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
-                  (LOOVCCVsWrong1 < LOOVCCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
-                  (LOOVCRCVsWrong1 < LOOVCRCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
-                  (LOOVCR2CVsWrong1 < LOOVCR2CVsWrong2) == (wrongMSEs1 < wrongMSEs2)))
-  datac <- summarySEwithin(dat, measurevar="Probability", withinvars=c("Method"))
-  #>    Shape   ColorScheme  N     Time Time_norm       sd        se        ci
-  #> 1  Round       Colored 12 43.58333  43.58333 1.212311 0.3499639 0.7702654
-  #> 2  Round Monochromatic 12 44.58333  44.58333 1.331438 0.3843531 0.8459554
-  #> 3 Square       Colored 12 42.58333  42.58333 1.461630 0.4219364 0.9286757
-  #> 4 Square Monochromatic 12 43.58333  43.58333 1.261312 0.3641095 0.8013997
-  ggplot(datac, aes(x=Method, y=Probability)) +
-    geom_bar(position=position_dodge(.9), colour="black", stat="identity") +
-    geom_errorbar(position=position_dodge(.9), width=.25, aes(ymin=Probability-ci, ymax=Probability+ci)) +
-    # coord_cartesian(ylim=c(40,46)) +
-    # scale_fill_manual(values=c("#CCCCCC","#FFFFFF")) +
-    # scale_y_continuous(breaks=seq(1:100)) +
-    theme_bw()
-  # geom_hline(yintercept=38)
-  dev.off()
-  
-  browser()
-  
-  print(paste0("MSE of LOO: ", mean((LOOCVs - trueMSEs)^2)))
-  print(paste0("MSE of LOOIS: ", mean((LOOISCVs - trueMSEs)^2)))
-  print(paste0("MSE of LOOISR: ", mean((LOOISRCVs - trueMSEs)^2)))
-  print(paste0("MSE of LOOISR: ", mean((LOOISR2CVs - trueMSEs)^2)))
-  print(paste0("MSE of LOOISP: ", mean((LOOISPCVs - trueMSEs)^2)))
-  print(paste0("MSE of LOOISPR: ", mean((LOOISPRCVs - trueMSEs)^2)))
-  print(paste0("MSE of LOOISPR: ", mean((LOOISPR2CVs - trueMSEs)^2)))
-  print(paste0("MSE of LOOVC: ", mean((LOOVCCVs - trueMSEs)^2)))
-  
-  print(paste0("MAE of LOO: ", mean(abs(LOOCVs - trueMSEs))))
-  print(paste0("MAE of LOOIS: ", mean(abs(LOOISCVs - trueMSEs))))
-  print(paste0("MAE of LOOVC: ", mean(abs(LOOVCCVs - trueMSEs))))
-  
-  print(paste0("MRE of LOO: ", mean(LOOCVs/trueMSEs)))
-  print(paste0("MRE of LOOIS: ", mean(LOOISCVs/trueMSEs)))
-  print(paste0("MRE of LOOVC: ", mean(LOOVCCVs/trueMSEs)))
-  
-  print(paste0("MAPE of LOO: ", 100*mean(abs(LOOCVs/trueMSEs-1))))
-  print(paste0("MAPE of LOOIS: ", 100*mean(abs(LOOISCVs/trueMSEs-1))))
-  print(paste0("MAPE of LOOVC: ", 100*mean(abs(LOOVCCVs/trueMSEs-1))))
-  
-  print(paste0("MPE of LOO: ", 100*mean(LOOCVs/trueMSEs-1)))
-  print(paste0("MPE of LOOIS: ", 100*mean(LOOISCVs/trueMSEs-1)))
-  print(paste0("MPE of LOOVC: ", 100*mean(LOOVCCVs/trueMSEs-1)))
-  
-  # n = 50:
-  # [1] "MSE of LOO: 0.0186379406422529"
-  # [1] "MSE of LOOIS: 0.0170571022906853"
-  # [1] "MSE of LOOVC: 0.0139447206201104"
-  
-  # [1] "MAE of LOO: 0.100422072993674"
-  # [1] "MAE of LOOIS: 0.0960316894688946"
-  # [1] "MAE of LOOVC: 0.0845123591858342"
-  
-  # [1] "MRE of LOO: 0.671353940243741"
-  # [1] "MRE of LOOIS: 0.985694537527453"
-  # [1] "MRE of LOOVC: 1.12418200931857"
-  
-  # [1] "MAPE of LOO: 44.4496728924345"
-  # [1] "MAPE of LOOIS: 47.7788979101375"
-  # [1] "MAPE of LOOVC: 43.8697950279161"
-  
-  # [1] "MPE of LOO: -32.8646059756259"
-  # [1] "MPE of LOOIS: -1.43054624725475"
-  # [1] "MPE of LOOVC: 12.4182009318574"
-  
-  # n=500:
-  # [1] "MSE of LOO: 0.000287803463307309"
-  # [1] "MSE of LOOIS: 9.96587931614364e-05"
-  # [1] "MSE of LOOVC: 0.000124932796730299"
-  
-  # [1] "MAE of LOO: 0.0129249857160369"
-  # [1] "MAE of LOOIS: 0.00770617706114003"
-  # [1] "MAE of LOOVC: 0.00860390665295181"
-  
-  # [1] "MRE of LOO: 0.594394496022479"
-  # [1] "MRE of LOOIS: 1.1115313438249"
-  # [1] "MRE of LOOVC: 1.25960186604909"
-  
-  # [1] "MAPE of LOO: 40.8130559620157"
-  # [1] "MAPE of LOOIS: 27.8996173768934"
-  # [1] "MAPE of LOOVC: 34.7072374564929"
-  
-  # [1] "MPE of LOO: -40.5605503977521"
-  # [1] "MPE of LOOIS: 11.1531343824896"
-  # [1] "MPE of LOOVC: 25.9601866049089"
-  
-  
-  browser()
 }
 
 # fit 2 GRFs on field unit square, one with true parameters, other with false parameters. 
