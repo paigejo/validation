@@ -80,7 +80,7 @@ if(inf$platform == "x86_64-apple-darwin17.0 (64-bit)") {
   setwd("~/git/jittering/")
   options(error=recover)
 } else if(inf$platform != "x86_64-apple-darwin15.6.0 (64-bit)" && inf$platform != "x86_64-w64-mingw32/x64 (64-bit)" && inf$platform != "x86_64-pc-linux-gnu (64-bit)") {
-  INLA:::inla.dynload.workaround()
+  # INLA:::inla.dynload.workaround() # use inla.binary.install instead
   # avoid setting too many threads and thereby using too much memory
   inla.setOption(num.threads=1)
   options(error=traceback)
