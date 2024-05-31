@@ -640,9 +640,9 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
     LOOVCPR2CVWrong1 = getWeightedControlVarEst(Ys=LOOCVsWrong1, Zf=cbind(minDists, minDists2), muf=c(minDistMu, minDistMu2), ws=1/rateEsts, shrinkWeights=TRUE, printPhat=printPhat)[1]
     LOOVCPR2CVWrong2 = getWeightedControlVarEst(Ys=LOOCVsWrong2, Zf=cbind(minDists, minDists2), muf=c(minDistMu, minDistMu2), ws=1/rateEsts, shrinkWeights=TRUE, printPhat=printPhat)[1]
   } else {
-    LOOCVs[i] = numeric(n1)
-    LOOCVsWrong1[i] = numeric(n1)
-    LOOCVsWrong2[i] = numeric(n1)
+    LOOCVs = numeric(n1)
+    LOOCVsWrong1 = numeric(n1)
+    LOOCVsWrong2 = numeric(n1)
     
     LOOCV = NULL
     LOOCVWrong1 = NULL
@@ -659,7 +659,8 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
     cellArea = 1/(nx*ny)
     LOOISrates = NULL
     LOOISCV = NULL
-    LOOISCVWrong = NULL
+    LOOISCVWrong1 = NULL
+    LOOISCVWrong2 = NULL
     
     LOOISPCV = NULL
     LOOISPCVWrong1 = NULL
