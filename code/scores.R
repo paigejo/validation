@@ -1358,7 +1358,12 @@ expectedIntervalScore = function(truth, truth.var, est, est.var, lower=NULL, upp
   lowerPt = (2/alpha) * (lower - condMeanLower) * pnorm(lower, truth, sqrt(truth.var))
   upperPt = (2/alpha) * (-upper + condMeanUpper) * pnorm(upper, truth, sqrt(truth.var), lower.tail = FALSE)
   
-  width + lowerPt + upperPt
+  if(!getAverage) {
+    width + lowerPt + upperPt
+  } else {
+    weights = weights*(1/sum(weights, na.rm=TRUE))
+    sum((width + lowerPt + upperPt)*weights, na.rm=na.rm)
+  }
 }
 
 # averages a list of many tables, each returned from the getScores function with distanceBreaks set by user
