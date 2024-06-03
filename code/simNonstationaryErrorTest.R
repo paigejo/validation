@@ -19,12 +19,12 @@
 # Note that the below function is a single iteration of the for loop 
 # for easy parallelization.
 griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL, 
-                                          propMount=.3, propSamplesMount=propMount/5, 
+                                          propMount=.3, oversampleMountRatio=1/5, 
                                           n1=50, gridNs=2^(1:6), Ks=c(9, 25), iter=1, 
                                           rGRFargsWrong1=NULL, rGRFargsWrong2=NULL, 
                                           nx=100, ny=100, sigmaEpsSqNonMount=.1^2, sigmaEpsSqMount=1^2, 
                                           sigmaEpsSqNonMountWrong1=.1^2, sigmaEpsSqMountWrong1=.1^2, 
-                                          sigmaEpsSqNonMountWrong2=.15^2, sigmaEpsSqMountWrong2=.9^2, 
+                                          sigmaEpsSqNonMountWrong2=.1, sigmaEpsSqMountWrong2=.1, 
                                           allSeeds=123, printProgress=FALSE, printPhat=FALSE) {
   
   if(iter > 1) {
@@ -35,6 +35,9 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
     print(paste0("iteration ", iter, "/", length(allSeeds)))
   }
   
+  tmp = oversampleMountRatio * propMount/(1-propMount)
+  # propSamplesMount = propMount * propSamplesMountRatio
+  propSamplesMount = tmp/(1+tmp)
   
   doLOO = TRUE
   if(n1 > 50) {
@@ -61,8 +64,8 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
   }
   if(is.null(rGRFargsWrong1)) {
     rGRFargsWrong1 = rGRFargsTruth
-    rGRFargsWrong1$cov.args$range = 1.25 * rGRFargsTruth$cov.args$range
-    rGRFargsWrong1$cov.args$smoothness = 1.5
+    # rGRFargsWrong1$cov.args$range = 1.25 * rGRFargsTruth$cov.args$range
+    # rGRFargsWrong1$cov.args$smoothness = 1.5
   }
   if(is.null(rGRFargsWrong2)) {
     rGRFargsWrong2 = rGRFargsWrong1
@@ -810,7 +813,7 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
        sigmaEpsSqNonMountWrong1, sigmaEpsSqMountWrong1, 
        sigmaEpsSqNonMountWrong2, sigmaEpsSqMountWrong2, 
        allSeeds, trueVarW, estVarWVC, 
-       file=paste0("savedOutput/griddedCVtestNonstatErr/n1", n1, "_pMount", propMount, "_pSMount", propSamplesMount, 
+       file=paste0("savedOutput/griddedCVtestNonstatErr/n1", n1, "_pMount", propMount, "_Rosamp", oversampleMountRatio, 
                    "_s2M", sigmaEpsSqMount, "_", sigmaEpsSqMountWrong1, "_", sigmaEpsSqMountWrong2, 
                    "_s2NM", sigmaEpsSqNonMount, "_", sigmaEpsSqNonMountWrong1, "_", sigmaEpsSqNonMountWrong2, 
                    "_iter", iter, ".RData"))
@@ -933,8 +936,8 @@ getNonstatErrECRPS = function(n=50, nsim=100,
                               rGRFargsTruth=NULL, rGRFargsMount=NULL, 
                               rGRFargsWrong1=NULL, rGRFargsWrong2=NULL, 
                               nx=100, ny=100, sigmaEpsSqNonMount=.1^2, sigmaEpsSqMount=1^2, 
-                              sigmaEpsSqNonMountWrong1=.1^2, sigmaEpsSqMountWrong1=.1^2, 
-                              sigmaEpsSqNonMountWrong2=.15^2, sigmaEpsSqMountWrong2=.9^2, 
+                              sigmaEpsSqNonMountWrong1=.2^2, sigmaEpsSqMountWrong1=.2^2, 
+                              sigmaEpsSqNonMountWrong2=.3^2, sigmaEpsSqMountWrong2=.8^2, 
                               seed=NULL, printProgress=TRUE) {
   if(!is.null(seed)) {
     set.seed(123)
@@ -1098,8 +1101,116 @@ getNonstatErrECRPS = function(n=50, nsim=100,
        wrongECRPS2SampleWeighted=wrongECRPS2SampleWeighted)
 }
 
+getNonstatErrECRPSpropGrid = function(n=50, nsim=100, 
+                                      propMountSeq=seq(0.05, .95, by=.05), propSamplesMountSeq=propMountSeq, 
+                                      rGRFargsTruth=NULL, rGRFargsMount=NULL, 
+                                      rGRFargsWrong1=NULL, rGRFargsWrong2=NULL, 
+                                      nx=100, ny=100, sigmaEpsSqNonMount=.1^2, sigmaEpsSqMount=1^2, 
+                                      sigmaEpsSqNonMountWrong1=.1^2, sigmaEpsSqMountWrong1=.1^2, 
+                                      sigmaEpsSqNonMountWrong2=.15^2, sigmaEpsSqMountWrong2=.9^2, 
+                                      seed=123, printProgress=TRUE) {
+  
+  
+  
+}
 
-
-
+getTransitionErrVar = function(propMount=.3, 
+                               oversampleMountRatioSeq=c(1/10, 1/5, 1/2, 1, 2, 5, 10), 
+                               sigmaEpsSqNonMount=.1^2, sigmaEpsSqMount=1^2, 
+                               score=c("is", "crps")) {
+  
+  score = match.arg(score)
+  
+  browser()
+  for(i in 1:length(oversampleMountRatioSeq)) {
+    print(paste0("i=", i, "/", length(oversampleMountRatioSeq)))
+    oversampleMountRatio = oversampleMountRatioSeq[i]
+    tmp = oversampleMountRatio * propMount/(1-propMount)
+    # propSamplesMount = propMount * propSamplesMountRatio
+    propSamplesMount = tmp/(1+tmp)
+    
+    # get the scoring rule requested
+    if(score == "crps") {
+      scoreName = "CRPS"
+      scoreFunDom = function(sigmaEpsSqNonMountWrong, sigmaEpsSqMountWrong=sigmaEpsSqNonMountWrong) {
+        expectedCRPS(0, truth.var = sigmaEpsSqMount, est = 0, est.var = sigmaEpsSqMountWrong, getAverage = FALSE)*propMount + expectedCRPS(0, truth.var = sigmaEpsSqNonMount, est = 0, est.var = sigmaEpsSqNonMountWrong, getAverage = FALSE)*(1-propMount)
+      }
+      scoreFunDat = function(sigmaEpsSqNonMountWrong, sigmaEpsSqMountWrong=sigmaEpsSqNonMountWrong) {
+        expectedCRPS(0, truth.var = sigmaEpsSqMount, est = 0, est.var = sigmaEpsSqMountWrong, getAverage = FALSE)*propSamplesMount + expectedCRPS(0, truth.var = sigmaEpsSqNonMount, est = 0, est.var = sigmaEpsSqNonMountWrong, getAverage = FALSE)*(1-propSamplesMount)
+      }
+    } else {
+      scoreName = "IS"
+      scoreFunDom = function(sigmaEpsSqNonMountWrong, sigmaEpsSqMountWrong=sigmaEpsSqNonMountWrong) {
+        expectedIntervalScore(0, truth.var = sigmaEpsSqMount, est = 0, est.var = sigmaEpsSqMountWrong, getAverage = FALSE)*propMount + expectedIntervalScore(0, truth.var = sigmaEpsSqNonMount, est = 0, est.var = sigmaEpsSqNonMountWrong, getAverage = FALSE)*(1-propMount)
+      }
+      scoreFunDat = function(sigmaEpsSqNonMountWrong, sigmaEpsSqMountWrong=sigmaEpsSqNonMountWrong) {
+        expectedIntervalScore(0, truth.var = sigmaEpsSqMount, est = 0, est.var = sigmaEpsSqMountWrong, getAverage = FALSE)*propSamplesMount + expectedIntervalScore(0, truth.var = sigmaEpsSqNonMount, est = 0, est.var = sigmaEpsSqNonMountWrong, getAverage = FALSE)*(1-propSamplesMount)
+      }
+    }
+    
+    # calculate the best stationary error var according to the data
+    sigmaSqTest = seq(sigmaEpsSqNonMount, sigmaEpsSqMount, l=100)
+    statDatScores = scoreFunDat(sigmaSqTest)
+    bestI = which.min(statDatScores)
+    sigmaSqBestDat = sigmaSqTest[bestI]
+    scoreBestDat = statDatScores[bestI]
+    
+    out = optimize(scoreFunDat, lower=0, upper=1)
+    sigmaSqBestDat = out$minimum
+    scoreBestDat = out$objective
+    
+    # calculate the best stationary error var on the domain
+    statDomScores = scoreFunDom(sigmaSqTest)
+    bestI = which.min(statDomScores)
+    sigmaSqBestDom = sigmaSqTest[bestI]
+    scoreBestDom = statDomScores[bestI]
+    
+    out = optimize(scoreFunDom, lower=0, upper=1)
+    sigmaSqBestDom = out$minimum
+    scoreBestDom = out$objective
+    
+    # Calculate expected scores under the data
+    sigmaSqsNM = seq(sigmaSqBestDom, sigmaEpsSqNonMount, l=100)
+    sigmaSqsM = seq(sigmaSqBestDom, sigmaEpsSqMount, l=100)
+    nonStatDatScores = scoreFunDat(sigmaSqsNM, sigmaSqsM)
+    
+    if(FALSE) {
+      # t = seq(0, 1, l=100)
+      # plot(t, nonStatDatScores, type="l")
+      plot(sigmaSqsNM, nonStatDatScores, type="l", xlab="Plains error variance", ylab="Score")
+      abline(h=scoreBestDat, lty=2)
+    }
+    
+    sigmaSqsNM = 10^(seq(log10(.1^2), log10(1^2), l=1000))
+    sigmaSqsM = 10^(seq(log10(.1^2), log10(1^2), l=1000))
+    sigmaSqsMat = expand.grid(sigmaSqsNM=sigmaSqsNM, sigmaSqsM=sigmaSqsM)
+    nonStatDatScoresMat = scoreFunDat(sigmaSqsMat[,1], sigmaSqsMat[,2])
+    nonStatDomScoresMat = scoreFunDom(sigmaSqsMat[,1], sigmaSqsMat[,2])
+    scoreDiffDat = nonStatDatScoresMat - scoreBestDat
+    scoreDiffDom = nonStatDomScoresMat - scoreFunDom(sigmaSqBestDat)
+    correctModelIndex = sign(scoreDiffDat) * sign(scoreDiffDom) * apply(abs(cbind(scoreDiffDat, scoreDiffDom)), 1, min)
+    fullMat = cbind(sigmaSqsMat, correctModelIndex)
+    cols = makeRedBlueDivergingColors(64, valRange=range(fullMat[,3]), center=0)
+    
+    pdf(paste0("figures/nonstatErrorIllustration/correctModel_Score", score, "_oversampM", oversampleMountRatio, ".pdf"), width=5.1, height=5)
+    par(mar=c(2.8, 1.3, 2, 1), oma=c(0, 0, 0, 1.5), mgp=c(1.9,.7,0))
+    plot(log10(fullMat[,1]), log10(fullMat[,2]), type="n", axes=FALSE, xlab="", ylab="",
+         main=TeX(paste0("LOO correct model selected ($R_{oversamp}=", oversampleMountRatio, "$)")), asp=1)
+    myQuiltPlot(log10(fullMat[,1]), log10(fullMat[,2]), fullMat[,3], col=cols,
+                add=TRUE, nx=500, ny=500, legend.mar=1.8)
+    axis(1, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-.75)
+    axis(2, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-1.5)
+    mtext(TeX("$\\sigma_{epsilon,Mount}^2"), side=2, line=-.1)
+    mtext(TeX("$\\sigma_{epsilon,Plains}^2"), side=1, line=1.3)
+    points(log10(c(sigmaSqBestDat, .01)), log10(c(sigmaSqBestDat, 1)), pch=19, col=c("purple", "green"))
+    # myQuiltPlot(fullMat[,1], fullMat[,2], fullMat[,3], col=cols, 
+    #            nx=500, ny=500, log="xy", asp=1, addColorBar=TRUE, 
+    #            xlab=TeX("$\\sigma_{epsilon,Plains}^2"), ylab=TeX("$\\sigma_{epsilon,Mount}^2"), 
+    #            main="Correct model selected", legend.mar=0)
+    dev.off()
+  }
+  
+  invisible(NULL)
+}
 
 

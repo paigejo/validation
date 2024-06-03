@@ -656,8 +656,8 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
                              rho=-.8, alpha=0, beta=1, n2=n, 
                              sigmaEpsSqNonMount=.1^2, sigmaEpsSqMount=1^2, 
                              sigmaEpsSqNonMountWrong1=.1^2, sigmaEpsSqMountWrong1=.1^2, 
-                             sigmaEpsSqNonMountWrong2=.15^2, sigmaEpsSqMountWrong2=.9^2, 
-                             propMount=.3, propSamplesMount=propMount/5, regenResults=TRUE, 
+                             sigmaEpsSqNonMountWrong2=.1, sigmaEpsSqMountWrong2=.1, 
+                             propMount=.3, oversampleMountRatio=1/5, regenResults=TRUE, 
                              printProgress=FALSE, relTicks1=NULL, relTickLabs1=NULL, 
                              relTicks2=NULL, relTickLabs2=NULL, unif=FALSE, 
                              preferential=FALSE) {
@@ -671,7 +671,7 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
   unifText = ifelse(unif, "_unif", "")
   prefText = ifelse(preferential, paste0("_prefA", alpha, "B", beta), "")
   twoDatText = ifelse(twoDatasets, paste0("_2dat_rho", rho), "")
-  nonStatErrorText = ifelse(nonStatError, paste0("_pMount", propMount, "_pSMount", propSamplesMount, 
+  nonStatErrorText = ifelse(nonStatError, paste0("_pMount", propMount, "_Rosamp", oversampleMountRatio, 
                             "_s2M", sigmaEpsSqMount, "_", sigmaEpsSqMountWrong1, "_", sigmaEpsSqMountWrong2, 
                             "_s2NM", sigmaEpsSqNonMount, "_", sigmaEpsSqNonMountWrong1, "_", sigmaEpsSqNonMountWrong2), "")
   unifTitleText = ifelse(unif, ", unif", "")
@@ -713,7 +713,7 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
       totTime = system.time(results <- lapply(1:niter, griddedResTestIterNonstatError, 
                                               rGRFargsTruth=rGRFargsTruth, 
                                               rGRFargsWrong1=rGRFargsWrong, rGRFargsWrong2=rGRFargsWrong2, 
-                                              propSamplesMount=propSamplesMount, 
+                                              oversampleMountRatio=oversampleMountRatio, 
                                               n1=n, gridNs=gridNs, allSeeds=seeds, 
                                               nx=nx, ny=ny, 
                                               propMount=propMount, Ks=Ks, rGRFargsMount=rGRFargsMount, 
@@ -721,6 +721,7 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
                                               sigmaEpsSqNonMountWrong1=sigmaEpsSqNonMountWrong1, sigmaEpsSqMountWrong1=sigmaEpsSqMountWrong1, 
                                               sigmaEpsSqNonMountWrong2=sigmaEpsSqNonMountWrong2, sigmaEpsSqMountWrong2=sigmaEpsSqMountWrong2, 
                                               printProgress=printProgress))
+      
     }
   } else {
     # load results
@@ -757,7 +758,7 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
                         cors1IS=cors1IS, cors2IS=cors2IS, cors1CVC=cors1CVC, cors2CVC=cors2CVC, 
                         trueVarW1=trueVarW1, trueVarW2=trueVarW2)
       } else {
-        out = load(paste0("savedOutput/griddedCVtestNonstatErr/n1", n, "_pMount", propMount, "_pSMount", propSamplesMount, 
+        out = load(paste0("savedOutput/griddedCVtestNonstatErr/n1", n, "_pMount", propMount, "_Rosamp", oversampleMountRatio, 
                           "_s2M", sigmaEpsSqMount, "_", sigmaEpsSqMountWrong1, "_", sigmaEpsSqMountWrong2, 
                           "_s2NM", sigmaEpsSqNonMount, "_", sigmaEpsSqNonMountWrong1, "_", sigmaEpsSqNonMountWrong2, 
                           "_iter", i, ".RData"))
@@ -815,7 +816,11 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
       results = c(results, list(thisList))
     }
   }
+  
+  # get values constant over all simulations
   gridNs = results[[1]]$gridNs
+  tmp = oversampleMountRatio * propMount/(1-propMount)
+  propSamplesMount = tmp/(1+tmp)
   
   # concatenate results
   getName = function(x, thisName, ind=NULL) {
