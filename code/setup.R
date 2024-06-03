@@ -30,6 +30,7 @@ if(FALSE) {
   install.packages("plyr")
   install.packages("deldir")
   install.packages("stringr")
+  install.packages("truncnorm")
   
   library(devtools)
   if(FALSE) {
@@ -74,6 +75,7 @@ library(TMB)
 library(plyr)
 library(deldir)
 library(stringr)
+library(truncnorm)
 
 inf = sessionInfo()
 if(inf$platform == "x86_64-apple-darwin17.0 (64-bit)") {

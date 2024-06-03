@@ -1062,15 +1062,15 @@ getNonstatErrECRPS = function(n=50, nsim=100,
     # trueMSE = mean((truth - muAcondB)^2) + sigmaEpsSq1
     # wrongMSE = mean((truth - muAcondBwrong)^2) + sigmaEpsSq1 # add sigmaEpsSq1, the true error variance, not sigmaEpsSq2
     
-    trueMSEs[i] = expectedCRPS(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondB, est.var=varAcondB + sigmaEpsSqTrueLoc)
-    wrongMSE1s[i] = expectedCRPS(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong1, est.var=varAcondBWrong1 + sigmaEpsSqWrong1Loc)
-    wrongMSE2s[i] = expectedCRPS(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong2, est.var=varAcondBWrong2 + sigmaEpsSqWrong2Loc)
+    trueMSEs[i] = expectedIntervalScore(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondB, est.var=varAcondB + sigmaEpsSqTrueLoc)
+    wrongMSE1s[i] = expectedIntervalScore(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong1, est.var=varAcondBWrong1 + sigmaEpsSqWrong1Loc)
+    wrongMSE2s[i] = expectedIntervalScore(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong2, est.var=varAcondBWrong2 + sigmaEpsSqWrong2Loc)
     
-    trueMSEsSampleWeighted[i] = expectedCRPS(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondB, est.var=varAcondB + sigmaEpsSqTrueLoc, 
+    trueMSEsSampleWeighted[i] = expectedIntervalScore(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondB, est.var=varAcondB + sigmaEpsSqTrueLoc, 
                                              weights=sampleProbs)
-    wrongMSE1sSampleWeighted[i] = expectedCRPS(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong1, est.var=varAcondBWrong1 + sigmaEpsSqWrong1Loc, 
+    wrongMSE1sSampleWeighted[i] = expectedIntervalScore(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong1, est.var=varAcondBWrong1 + sigmaEpsSqWrong1Loc, 
                                                weights=sampleProbs)
-    wrongMSE2sSampleWeighted[i] = expectedCRPS(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong2, est.var=varAcondBWrong2 + sigmaEpsSqWrong2Loc, 
+    wrongMSE2sSampleWeighted[i] = expectedIntervalScore(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong2, est.var=varAcondBWrong2 + sigmaEpsSqWrong2Loc, 
                                                weights=sampleProbs)
     
     if(printProgress) {

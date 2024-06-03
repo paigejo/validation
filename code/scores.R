@@ -1164,7 +1164,7 @@ expectedCRPS = function(truth, truth.var, est, est.var, getAverage=TRUE, na.rm=F
 intervalScore = function(truth, est=NULL, var=NULL, lower=NULL, upper=NULL, 
                          estMat=NULL, significance=.8, returnIntervalWidth=FALSE, 
                          returnCoverage=FALSE, doFuzzyReject=TRUE, getAverage=TRUE, ns=NULL, 
-                         na.rm=FALSE, weights=rep(1, length(truth))){
+                         na.rm=FALSE, weights=rep(1, length(truth))) {
   
   # if more than 1 significance level, return results for each
   if(length(significance) > 1) {
@@ -1314,6 +1314,51 @@ intervalScore = function(truth, est=NULL, var=NULL, lower=NULL, upper=NULL,
   }
   
   allResults
+}
+
+# same is intervalScore, but calculates expected IS over a distribution of 
+# possible "truths". Currently many things are not yet implemented. Assumes 
+# truth and predictive distributions are Gaussian.
+expectedIntervalScore = function(truth, truth.var, est, est.var, lower=NULL, upper=NULL, 
+                         estMat=NULL, nominalCvg=.8, returnIntervalWidth=FALSE, 
+                         returnCoverage=FALSE, doFuzzyReject=FALSE, getAverage=TRUE, ns=NULL, 
+                         na.rm=FALSE, weights=rep(1, length(truth))) {
+  
+  if(returnCoverage || doFuzzyReject || !is.null(estMat) || returnIntervalWidth) {
+    stop("option not implemented yet")
+  }
+  
+  # set upper, lower quantiles based on predictive mean/var
+  alpha = 1-nominalCvg
+  if(is.null(lower)) {
+    lQuant = alpha/2
+    lower = qnorm(lQuant, est, sqrt(est.var))
+  }
+  if(is.null(upper)) {
+    uQuant = 1 - alpha/2
+    upper = qnorm(uQuant, est, sqrt(est.var))
+  }
+  
+  # from the wikipeidia page on truncated normal distributions:
+  # https://en.wikipedia.org/wiki/Truncated_normal_distribution
+  # thisAlpha = (upper - truth)/sqrt(truth.var)
+  # thisBeta = (lower - truth)/sqrt(truth.var)
+  # condMeanUpper = truth + sqrt(truth.var) * dnorm(thisAlpha) / (1 - pnorm(thisAlpha))
+  # condMeanLower = truth - sqrt(truth.var) * dnorm(thisBeta) / pnorm(thisBeta)
+  # the above calculations were replaced with the calculations below that are 
+  # more numerically stable
+  require(truncnorm)
+  condMeanUpper = etruncnorm(a=upper, mean=truth, sd=sqrt(truth.var))
+  condMeanLower = etruncnorm(b=lower, mean=truth, sd=sqrt(truth.var))
+  # E_Y[IS] = 
+  # u - l + 
+  # (2/alpha) * (l - E[Y|Y< l]P(Y < l)) + 
+  # (2/alpha) * (-u + E[Y|Y> u]P(Y > u))
+  width = upper - lower
+  lowerPt = (2/alpha) * (lower - condMeanLower) * pnorm(lower, truth, sqrt(truth.var))
+  upperPt = (2/alpha) * (-upper + condMeanUpper) * pnorm(upper, truth, sqrt(truth.var), lower.tail = FALSE)
+  
+  width + lowerPt + upperPt
 }
 
 # averages a list of many tables, each returned from the getScores function with distanceBreaks set by user
