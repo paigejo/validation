@@ -1743,7 +1743,7 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
     
     pdf(paste0(figureFolder, type,  "_CVMRE_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=6, height=6)
     dat = data.frame(
-      Method=rep(c(plotTitleType, "IW", "VC", "IWR"), each=n), 
+      Method=rep(c(plotTitleType, "IW", "VC", "IWR"), each=niter), 
       sqResids=c(thisCVs/trueMSEs, 
                  thisISCVs/trueMSEs, 
                  thisVCCVs/trueMSEs, 
