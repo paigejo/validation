@@ -47,6 +47,7 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
       doLOO = FALSE
       if(n1 > 2000) {
         Ks = Ks[Ks <= 10]
+        gridNs = gridNs[gridNs <= 4]
       }
     }
   }
