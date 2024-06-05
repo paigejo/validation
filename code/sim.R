@@ -817,6 +817,21 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
     }
   }
   
+  types = c("LOO", paste("KFold", Ks, sep=""))
+  
+  if(n > 50) {
+    gridNs = c(3, 5)
+    
+    if(n > 500) {
+      types = types[-1]
+      
+      if(n > 2000) {
+        types = types[-2]
+        gridNs = 3
+      }
+    }
+  }
+  
   # get values constant over all simulations
   gridNs = results[[1]]$gridNs
   tmp = oversampleMountRatio * propMount/(1-propMount)
@@ -1021,20 +1036,6 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
   # griddedRCVpropLow12 = griddedRCVprop12 - griddedRCVpropMOE12
   # griddedR2CVpropLow12 = griddedR2CVprop12 - griddedR2CVpropMOE12
   
-  types = c("LOO", paste("KFold", Ks, sep=""))
-  
-  if(n > 50) {
-    gridNs = c(3, 5)
-    
-    if(n > 500) {
-      types = types[-1]
-      
-      if(n > 2000) {
-        types = types[-2]
-        gridNs = 3
-      }
-    }
-  }
   for(typeI in 1:length(types)) {
     type = types[typeI]
     methods=c("", "IW", "IWR", "IWR2", 
