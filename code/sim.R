@@ -878,15 +878,15 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
   griddedR2CVsWrong2 = sapply(results, getName, thisName="griddedR2CVsWrong2")
   
   if(length(gridNs) == 1) {
-    griddedCVs = matrix(griddedCVs, ncol=1)
-    griddedCVsWrong1 = matrix(griddedCVsWrong1, ncol=1)
-    griddedCVsWrong2 = matrix(griddedCVsWrong2, ncol=1)
-    griddedRCVs = matrix(griddedRCVs, ncol=1)
-    griddedRCVsWrong1 = matrix(griddedRCVsWrong1, ncol=1)
-    griddedRCVsWrong2 = matrix(griddedRCVsWrong2, ncol=1)
-    griddedR2CVs = matrix(griddedR2CVs, ncol=1)
-    griddedR2CVsWrong1 = matrix(griddedR2CVsWrong1, ncol=1)
-    griddedR2CVsWrong2 = matrix(griddedR2CVsWrong2, ncol=1)
+    griddedCVs = matrix(griddedCVs, nrow=1)
+    griddedCVsWrong1 = matrix(griddedCVsWrong1, nrow=1)
+    griddedCVsWrong2 = matrix(griddedCVsWrong2, nrow=1)
+    griddedRCVs = matrix(griddedRCVs, nrow=1)
+    griddedRCVsWrong1 = matrix(griddedRCVsWrong1, nrow=1)
+    griddedRCVsWrong2 = matrix(griddedRCVsWrong2, nrow=1)
+    griddedR2CVs = matrix(griddedR2CVs, nrow=1)
+    griddedR2CVsWrong1 = matrix(griddedR2CVsWrong1, nrow=1)
+    griddedR2CVsWrong2 = matrix(griddedR2CVsWrong2, nrow=1)
   }
   
   # LOOCVs = sapply(results, getName, thisName="LOOCV")
