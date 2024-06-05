@@ -1265,7 +1265,10 @@ getTransitionErrVar = function(propMount=.3,
     plot(log10(fullMat[,1]), log10(fullMat[,2]), type="n", axes=FALSE, xlab="", ylab="",
          main=TeX(paste0("LOO correct model selected ($R_{oversamp}=", oversampleMountRatio, "$)")), asp=1)
     myQuiltPlot(log10(fullMat[,1]), log10(fullMat[,2]), fullMat[,3], col=cols,
-                add=TRUE, nx=500, ny=500, legend.mar=1.8)
+                add=TRUE, nx=500, ny=500, legend.mar=1.8, zlim=c(0,1))
+    correctModelIndexMat = matrix(correctModelIndex, nrow=length(sigmaSqsNM), ncol=length(sigmaSqsM))
+    contour(log10(sigmaSqsNM), log10(sigmaSqsM), correctModelIndexMat, col=rgb(.4,.4,.4), 
+            add=TRUE)
     axis(1, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-.75)
     axis(2, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-1.5)
     mtext(TeX("$\\sigma_{epsilon,Mount}^2"), side=2, line=-.1)
@@ -1291,6 +1294,9 @@ getTransitionErrVar = function(propMount=.3,
            main=TeX(paste0("LOO correct probability ($R_{oversamp}=", oversampleMountRatio, "$, $n=$", thisN, ")")), asp=1)
       myQuiltPlot(log10(fullMat[,1]), log10(fullMat[,2]), selProbs, col=cols,
                   add=TRUE, nx=500, ny=500, legend.mar=1.8)
+      selProbMat = matrix(selProbs, nrow=length(sigmaSqsNM), ncol=length(sigmaSqsM))
+      contour(log10(sigmaSqsNM), log10(sigmaSqsM), selProbMat, col=rgb(.4,.4,.4), 
+              levels=seq(.2, .8, by=.2), add=TRUE)
       axis(1, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-.75)
       axis(2, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-1.5)
       mtext(TeX("$\\sigma_{epsilon,Mount}^2"), side=2, line=-.1)
@@ -1301,6 +1307,8 @@ getTransitionErrVar = function(propMount=.3,
       #            xlab=TeX("$\\sigma_{epsilon,Plains}^2"), ylab=TeX("$\\sigma_{epsilon,Mount}^2"), 
       #            main="Correct model selected", legend.mar=0)
       dev.off()
+      
+      browser()
       
     }
     
