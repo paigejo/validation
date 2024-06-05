@@ -1118,11 +1118,10 @@ getNonstatErrECRPSpropGrid = function(n=50, nsim=100,
 getTransitionErrVar = function(propMount=.3, 
                                oversampleMountRatioSeq=c(1/10, 1/5, 1/2, 1, 2, 5, 10), 
                                sigmaEpsSqNonMount=.1^2, sigmaEpsSqMount=1^2, 
-                               score=c("is", "crps")) {
+                               score=c("is", "crps"), ns=c(50, 200, 500, 2000, 10000)) {
   
   score = match.arg(score)
   
-  browser()
   for(i in 1:length(oversampleMountRatioSeq)) {
     print(paste0("i=", i, "/", length(oversampleMountRatioSeq)))
     oversampleMountRatio = oversampleMountRatioSeq[i]
@@ -1139,6 +1138,12 @@ getTransitionErrVar = function(propMount=.3,
       scoreFunDat = function(sigmaEpsSqNonMountWrong, sigmaEpsSqMountWrong=sigmaEpsSqNonMountWrong) {
         expectedCRPS(0, truth.var = sigmaEpsSqMount, est = 0, est.var = sigmaEpsSqMountWrong, getAverage = FALSE)*propSamplesMount + expectedCRPS(0, truth.var = sigmaEpsSqNonMount, est = 0, est.var = sigmaEpsSqNonMountWrong, getAverage = FALSE)*(1-propSamplesMount)
       }
+      scoreVarDeltaM = function(sigmaEpsSqMountWrong1, sigmaEpsSqMountWrong2=sigmaEpsSqMountWrong1) {
+        stop("not yet implemented")
+      }
+      scoreVarDeltaP = function(sigmaEpsSqNonMountWrong1, sigmaEpsSqNonMountWrong2=sigmaEpsSqNonMountWrong1) {
+        stop("not yet implemented")
+      }
     } else {
       scoreName = "IS"
       scoreFunDom = function(sigmaEpsSqNonMountWrong, sigmaEpsSqMountWrong=sigmaEpsSqNonMountWrong) {
@@ -1147,6 +1152,68 @@ getTransitionErrVar = function(propMount=.3,
       scoreFunDat = function(sigmaEpsSqNonMountWrong, sigmaEpsSqMountWrong=sigmaEpsSqNonMountWrong) {
         expectedIntervalScore(0, truth.var = sigmaEpsSqMount, est = 0, est.var = sigmaEpsSqMountWrong, getAverage = FALSE)*propSamplesMount + expectedIntervalScore(0, truth.var = sigmaEpsSqNonMount, est = 0, est.var = sigmaEpsSqNonMountWrong, getAverage = FALSE)*(1-propSamplesMount)
       }
+      scoreVarDeltaM = function(sigmaEpsSqMountWrong1, sigmaEpsSqMountWrong2=sigmaEpsSqMountWrong1) {
+        sigma1SqM = varIntervalScore(0, truth.var = sigmaEpsSqMount, est = 0, est.var = sigmaEpsSqMountWrong1, getAverage = FALSE)
+        sigma2SqM = varIntervalScore(0, truth.var = sigmaEpsSqMount, est = 0, est.var = sigmaEpsSqMountWrong2, getAverage = FALSE)
+        rho12M = covIntervalScore(0, truth.var = sigmaEpsSqMount, est1 = 0, est.var1 = sigmaEpsSqMountWrong1, 
+                                  est2 = 0, est.var2 = sigmaEpsSqMountWrong2, getAverage = FALSE)
+        (1/propSamplesMount) * (sigma1SqM + sigma2SqM - 2*rho12M)
+      }
+      scoreVarDeltaP = function(sigmaEpsSqNonMountWrong1, sigmaEpsSqNonMountWrong2=sigmaEpsSqNonMountWrong1) {
+        sigma1SqP = varIntervalScore(0, truth.var = sigmaEpsSqNonMount, est = 0, est.var = sigmaEpsSqNonMountWrong1, getAverage = FALSE)
+        sigma2SqP = varIntervalScore(0, truth.var = sigmaEpsSqNonMount, est = 0, est.var = sigmaEpsSqNonMountWrong2, getAverage = FALSE)
+        rho12P = covIntervalScore(0, truth.var = sigmaEpsSqNonMount, est1 = 0, est.var1 = sigmaEpsSqNonMountWrong1, 
+                                  est2 = 0, est.var2 = sigmaEpsSqNonMountWrong2, getAverage = FALSE)
+        (1/(1-propSamplesMount)) * (sigma1SqP + sigma2SqP - 2*rho12P)
+      }
+    }
+    
+    correctSelProb = function(n, sigmaEpsSqNonMountWrong1, sigmaEpsSqMountWrong1=sigmaEpsSqNonMountWrong1, 
+                              sigmaEpsSqNonMountWrong2, sigmaEpsSqMountWrong2=sigmaEpsSqNonMountWrong2) {
+      # calculate MVN mean, variance of joint distribution between LOO score diff and IW score diff
+      mu1M = expectedIntervalScore(0, truth.var = sigmaEpsSqMount, est = 0, est.var = sigmaEpsSqMountWrong1, getAverage = FALSE)
+      mu2M = expectedIntervalScore(0, truth.var = sigmaEpsSqMount, est = 0, est.var = sigmaEpsSqMountWrong2, getAverage = FALSE)
+      mu1P = expectedIntervalScore(0, truth.var = sigmaEpsSqNonMount, est = 0, est.var = sigmaEpsSqNonMountWrong1, getAverage = FALSE)
+      mu2P = expectedIntervalScore(0, truth.var = sigmaEpsSqNonMount, est = 0, est.var = sigmaEpsSqNonMountWrong2, getAverage = FALSE)
+      muM = mu1M - mu2M
+      muP = mu1P - mu2P
+      sigmaSqM = scoreVarDeltaM(sigmaEpsSqMountWrong1, sigmaEpsSqMountWrong2)
+      sigmaSqP = scoreVarDeltaP(sigmaEpsSqNonMountWrong1, sigmaEpsSqNonMountWrong2)
+      A = rbind(c(propMount, 1-propMount), 
+                c(propSamplesMount, 1-propSamplesMount))
+      
+      startTime = proc.time()[3]
+      thisProb = function(i) {
+        thisSigmaSqM = sigmaSqM[i]
+        thisSigmaSqP = sigmaSqP[i]
+        thisMuM = muM[i]
+        thisMuP = muP[i]
+        
+        D = (1/n) * diag(c(thisSigmaSqM, thisSigmaSqP))
+        Sigma = A %*% D %*% t(A)
+        mu = A %*% c(thisMuM, thisMuP)
+        
+        pneg = pmvnorm(lower=-Inf,
+                       upper=c(0, 0),
+                       mean=c(mu),
+                       sigma=Sigma)[1]
+        ppos = pmvnorm(lower=0,
+                       upper=Inf,
+                       mean=c(mu),
+                       sigma=Sigma)[1]
+        
+        tenthN = floor(length(sigmaSqM)/10)
+        if(((i %% tenthN) == 0) || i == 1000) {
+          currTime = proc.time()[3]
+          tLeft = estTimeLeft(startTime, currTime, i, length(sigmaSqM))
+          print(paste0("iter ", i, "/", length(sigmaSqM), ", est time left: ", tLeft/60, " minutes"))
+        }
+        
+        pneg + ppos
+      }
+      
+      selProbs = sapply(1:length(mu1M), thisProb)
+      selProbs
     }
     
     # calculate the best stationary error var according to the data
@@ -1209,6 +1276,35 @@ getTransitionErrVar = function(propMount=.3,
     #            xlab=TeX("$\\sigma_{epsilon,Plains}^2"), ylab=TeX("$\\sigma_{epsilon,Mount}^2"), 
     #            main="Correct model selected", legend.mar=0)
     dev.off()
+    
+    for(j in 1:length(ns)) {
+      thisN = ns[j]
+      
+      # calculate asymptotic selection probabilities for this n
+      selProbs = correctSelProb(thisN, sigmaEpsSqNonMountWrong1=fullMat[,1], sigmaEpsSqMountWrong1=fullMat[,2], 
+                                sigmaEpsSqNonMountWrong2=sigmaSqBestDat, sigmaEpsSqMountWrong2=sigmaSqBestDat)
+      
+      cols = makeRedBlueDivergingColors(64, valRange=range(selProbs), center=0.5)
+      pdf(paste0("figures/nonstatErrorIllustration/correctModelProb_Score", score, "_oversampM", oversampleMountRatio, "_n", thisN, ".pdf"), width=5.1, height=5)
+      par(mar=c(2.8, 1.3, 2, 1), oma=c(0, 0, 0, 1.5), mgp=c(1.9,.7,0))
+      plot(log10(fullMat[,1]), log10(fullMat[,2]), type="n", axes=FALSE, xlab="", ylab="",
+           main=TeX(paste0("LOO correct probability ($R_{oversamp}=", oversampleMountRatio, "$, $n=$", thisN, ")")), asp=1)
+      myQuiltPlot(log10(fullMat[,1]), log10(fullMat[,2]), selProbs, col=cols,
+                  add=TRUE, nx=500, ny=500, legend.mar=1.8)
+      axis(1, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-.75)
+      axis(2, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-1.5)
+      mtext(TeX("$\\sigma_{epsilon,Mount}^2"), side=2, line=-.1)
+      mtext(TeX("$\\sigma_{epsilon,Plains}^2"), side=1, line=1.3)
+      points(log10(c(sigmaSqBestDat, .01)), log10(c(sigmaSqBestDat, 1)), pch=19, col=c("purple", "green"))
+      # myQuiltPlot(fullMat[,1], fullMat[,2], fullMat[,3], col=cols, 
+      #            nx=500, ny=500, log="xy", asp=1, addColorBar=TRUE, 
+      #            xlab=TeX("$\\sigma_{epsilon,Plains}^2"), ylab=TeX("$\\sigma_{epsilon,Mount}^2"), 
+      #            main="Correct model selected", legend.mar=0)
+      dev.off()
+      
+      browser()
+    }
+    
   }
   
   invisible(NULL)

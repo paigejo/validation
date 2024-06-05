@@ -1366,6 +1366,247 @@ expectedIntervalScore = function(truth, truth.var, est, est.var, lower=NULL, upp
   }
 }
 
+# same is intervalScore, but calculates IS variance for one observation over a
+# distribution of possible "truths". Currently many things are not yet
+# implemented. Assumes truth and predictive distributions are Gaussian.
+varIntervalScore = function(truth, truth.var, est, est.var, lower=NULL, upper=NULL, 
+                            estMat=NULL, nominalCvg=.8, returnIntervalWidth=FALSE, 
+                            returnCoverage=FALSE, doFuzzyReject=FALSE, getAverage=TRUE, ns=NULL, 
+                            na.rm=FALSE, weights=rep(1, length(truth))) {
+  
+  if(returnCoverage || doFuzzyReject || !is.null(estMat) || returnIntervalWidth) {
+    stop("option not implemented yet")
+  }
+  
+  # set upper, lower quantiles based on predictive mean/var
+  alpha = 1-nominalCvg
+  if(is.null(lower)) {
+    lQuant = alpha/2
+    lower = qnorm(lQuant, est, sqrt(est.var))
+  }
+  if(is.null(upper)) {
+    uQuant = 1 - alpha/2
+    upper = qnorm(uQuant, est, sqrt(est.var))
+  }
+  
+  # get mean and variance of truncated normal distributions
+  # require(truncnorm)
+  # condMeanUpper = etruncnorm(a=upper, mean=truth, sd=sqrt(truth.var))
+  # condMeanLower = etruncnorm(b=lower, mean=truth, sd=sqrt(truth.var))
+  # condVarUpper = vtruncnorm(a=upper, mean=truth, sd=sqrt(truth.var))
+  # condVarLower = vtruncnorm(b=lower, mean=truth, sd=sqrt(truth.var))
+  
+  require(RcppTN)
+  n = max(c(length(truth), length(truth.var), length(est), length(est.var)))
+  truth = rep(truth, n/length(truth))
+  truth.var = rep(truth.var, n/length(truth.var))
+  est = rep(est, n/length(est))
+  est.var = rep(est.var, n/length(est.var))
+  
+  condMeanUpper = etn(.mean=truth, .sd=sqrt(truth.var), .low=upper)
+  condMeanLower = etn(.mean=truth, .sd=sqrt(truth.var), .high=lower)
+  condVarUpper = vtn(.mean=truth, .sd=sqrt(truth.var), .low=upper)
+  condVarLower = vtn(.mean=truth, .sd=sqrt(truth.var), .high=lower)
+  
+  # Var_Y[IS] = 
+  # (2/alpha)^2 * P(Y<l)[P(Y>l)(l - E[Y|Y< l])^2 + Var(Y|Y<l)] + 
+  # (2/alpha)^2 * P(Y>u)[P(Y<u)(E[Y|Y> l] - u)^2 + Var(Y|Y>u)] - 
+  # 2(2/alpha)^2 * P(Y<l)P(Y>u)(l - E[Y|Y< l])(E[Y|Y> l] - u)
+  pltl = pnorm(lower, truth, sqrt(truth.var))
+  pgtl = 1 - pltl
+  pgtu = pnorm(upper, truth, sqrt(truth.var), lower.tail = FALSE)
+  pltu = 1 - pgtu
+  lowerPt = (2/alpha)^2 * pltl * (pgtl * (lower - condMeanLower)^2 + condVarLower)
+  upperPt = (2/alpha)^2 * pgtu * (pltu * (condMeanUpper - upper)^2 + condVarUpper)
+  crossPt = - 2*(2/alpha)^2 * pltl * pgtu * (lower - condMeanLower) * (condMeanUpper - upper)
+  
+  if(!getAverage) {
+    lowerPt + upperPt + crossPt
+  } else {
+    weights = weights*(1/sum(weights, na.rm=TRUE))
+    sum((lowerPt + upperPt + crossPt)*weights, na.rm=na.rm)
+  }
+}
+
+# same is intervalScore, but calculates IS covariance for one observation over a
+# distribution of possible "truths" and 2 predictive distributions. Currently
+# many things are not yet implemented. Assumes truth and predictive
+# distributions are Gaussian.
+covIntervalScore = function(truth, truth.var, est1, est.var1, est2, est.var2, 
+                            lower1=NULL, upper1=NULL, lower2=NULL, upper2=NULL, 
+                            estMat=NULL, nominalCvg=.8, returnIntervalWidth=FALSE, 
+                            returnCoverage=FALSE, doFuzzyReject=FALSE, getAverage=TRUE, ns=NULL, 
+                            na.rm=FALSE, weights=rep(1, length(truth))) {
+  
+  if(returnCoverage || doFuzzyReject || !is.null(estMat) || returnIntervalWidth) {
+    stop("option not implemented yet")
+  }
+  
+  # make sure all inputs are the same length
+  n = max(c(length(truth), length(truth.var), 
+            length(est1), length(est.var1), 
+            length(est2), length(est.var2)))
+  
+  if(length(truth) < n) {
+    truth = rep(truth, n/length(truth))
+  }
+  if(length(truth.var) < n) {
+    truth.var = rep(truth.var, n/length(truth.var))
+  }
+  if(length(est1) < n) {
+    est1 = rep(est1, n/length(est1))
+  }
+  if(length(est.var1) < n) {
+    est.var1 = rep(est.var1, n/length(est.var1))
+  }
+  if(length(est2) < n) {
+    est2 = rep(est2, n/length(est2))
+  }
+  if(length(est.var2) < n) {
+    est.var2 = rep(est.var2, n/length(est.var2))
+  }
+  
+  # set upper, lower quantiles based on predictive mean/var
+  alpha = 1-nominalCvg
+  if(is.null(lower1)) {
+    lQuant = alpha/2
+    lower1 = qnorm(lQuant, est1, sqrt(est.var1))
+  }
+  if(is.null(upper1)) {
+    uQuant = 1 - alpha/2
+    upper1 = qnorm(uQuant, est1, sqrt(est.var1))
+  }
+  if(is.null(lower2)) {
+    lQuant = alpha/2
+    lower2 = qnorm(lQuant, est2, sqrt(est.var2))
+  }
+  if(is.null(upper2)) {
+    uQuant = 1 - alpha/2
+    upper2 = qnorm(uQuant, est2, sqrt(est.var2))
+  }
+  upper12 = apply(cbind(upper1, upper2), 1, max)
+  lower12 = apply(cbind(lower1, lower2), 1, min)
+  
+  # get mean and variance of truncated normal distributions
+  # require(truncnorm)
+  # condMeanUpper1 = etruncnorm(a=upper1, mean=truth, sd=sqrt(truth.var))
+  # condMeanLower1 = etruncnorm(b=lower1, mean=truth, sd=sqrt(truth.var))
+  # condVarUpper1 = vtruncnorm(a=upper1, mean=truth, sd=sqrt(truth.var))
+  # condVarLower1 = vtruncnorm(b=lower1, mean=truth, sd=sqrt(truth.var))
+  # 
+  # condMeanUpper2 = etruncnorm(a=upper2, mean=truth, sd=sqrt(truth.var))
+  # condMeanLower2 = etruncnorm(b=lower2, mean=truth, sd=sqrt(truth.var))
+  # condVarUpper2 = vtruncnorm(a=upper2, mean=truth, sd=sqrt(truth.var))
+  # condVarLower2 = vtruncnorm(b=lower2, mean=truth, sd=sqrt(truth.var))
+  # 
+  # condMeanUpper12 = apply(cbind(condMeanUpper1, condMeanUpper2), 1, max)
+  # condMeanLower12 = apply(cbind(condMeanLower1, condMeanLower2), 1, min)
+  # condVarUpper12 = vtruncnorm(a=upper12, mean=truth, sd=sqrt(truth.var))
+  # condVarLower12 = vtruncnorm(b=lower12, mean=truth, sd=sqrt(truth.var))
+  # 
+  # switchL = upper1 < lower2
+  # condMeanUpper1Lower2 = rep(0, n)
+  # condMeanUpper1Lower2[switchL] = etruncnorm(a=upper1[switchL], b=lower2[switchL], mean=truth[switchL], sd=sqrt(truth.var[switchL]))
+  # condVarUpper1Lower2 = rep(0, n)
+  # condVarUpper1Lower2[switchL] = vtruncnorm(a=upper1[switchL], b=lower2[switchL], mean=truth[switchL], sd=sqrt(truth.var[switchL]))
+  # 
+  # switchL = upper2 < lower1
+  # condMeanLower1Upper2 = rep(0, n)
+  # condMeanLower1Upper2[switchL] = etruncnorm(a=upper2[switchL], b=lower1[switchL], mean=truth[switchL], sd=sqrt(truth.var[switchL]))
+  # condVarLower1Upper2 = rep(0, n)
+  # condVarLower1Upper2[switchL] = vtruncnorm(a=upper2[switchL], b=lower1[switchL], mean=truth[switchL], sd=sqrt(truth.var[switchL]))
+  
+  require(RcppTN)
+  condMeanUpper1 = etn(.mean=truth, .sd=sqrt(truth.var), .low=upper1)
+  condMeanLower1 = etn(.mean=truth, .sd=sqrt(truth.var), .high=lower1)
+  condVarUpper1 = vtn(.mean=truth, .sd=sqrt(truth.var), .low=upper1)
+  condVarLower1 = vtn(.mean=truth, .sd=sqrt(truth.var), .high=lower1)
+  
+  condMeanUpper2 = etn(.mean=truth, .sd=sqrt(truth.var), .low=upper2)
+  condMeanLower2 = etn(.mean=truth, .sd=sqrt(truth.var), .high=lower2)
+  condVarUpper2 = vtn(.mean=truth, .sd=sqrt(truth.var), .low=upper2)
+  condVarLower2 = vtn(.mean=truth, .sd=sqrt(truth.var), .high=lower2)
+  
+  condMeanUpper12 = apply(cbind(condMeanUpper1, condMeanUpper2), 1, max)
+  condMeanLower12 = apply(cbind(condMeanLower1, condMeanLower2), 1, min)
+  condVarUpper12 = vtn(.mean=truth, .sd=sqrt(truth.var), .low=upper12)
+  condVarLower12 = vtn(.mean=truth, .sd=sqrt(truth.var), .high=lower12)
+  
+  switchL = upper1 < lower2
+  condMeanUpper1Lower2 = rep(0, n)
+  condMeanUpper1Lower2[switchL] = etn(.mean=truth[switchL], .sd=sqrt(truth.var[switchL]), .low=upper1[switchL], .high=lower2[switchL])
+  condVarUpper1Lower2 = rep(0, n)
+  condVarUpper1Lower2[switchL] = vtn(.mean=truth[switchL], .sd=sqrt(truth.var[switchL]), .low=upper1[switchL], .high=lower2[switchL])
+  
+  switchL = upper2 < lower1
+  condMeanLower1Upper2 = rep(0, n)
+  condMeanLower1Upper2[switchL] = etn(.mean=truth[switchL], .sd=sqrt(truth.var[switchL]), .high=lower1[switchL], .low=upper2[switchL])
+  condVarLower1Upper2 = rep(0, n)
+  condVarLower1Upper2[switchL] = vtn(.mean=truth[switchL], .sd=sqrt(truth.var[switchL]), .high=lower1[switchL], .low=upper2[switchL])
+  
+  pltl1 = pnorm(lower1, truth, sqrt(truth.var))
+  pgtl1 = 1 - pltl1
+  pgtu1 = pnorm(upper1, truth, sqrt(truth.var), lower.tail = FALSE)
+  pltu1 = 1 - pgtu1
+  
+  pltl2 = pnorm(lower2, truth, sqrt(truth.var))
+  pgtl2 = 1 - pltl2
+  pgtu2 = pnorm(upper2, truth, sqrt(truth.var), lower.tail = FALSE)
+  pltu2 = 1 - pgtu2
+  
+  pltl12 = apply(cbind(pltl1, pltl2), 1, min)
+  pgtu12 = apply(cbind(pgtu1, pgtu2), 1, min)
+  
+  switchL = upper1 < lower2
+  piu1l2 = rep(0, n)
+  piu1l2[switchL] = pgtu1[switchL] - pltl2[switchL]
+  switchL = upper2 < lower1
+  piu2l1 = rep(0, n)
+  piu2l1[switchL] = pgtu2[switchL] - pltl1[switchL]
+  
+  # Cov(IS_1, IS_2) = 4/alpha^2 * 
+  # Cov((l1 - Y)I(Y < l1) + (Y - u1)I(Y > u1), (l2 - Y)I(Y < l2) + (Y - u2)I(Y > u2))
+  # = 4/alpha^2 * [
+  # Cov((l1 - Y)I(Y < l1), (l2 - Y)I(Y < l2)) + 
+  # Cov((l1 - Y)I(Y < l1), (Y - u2)I(Y > u2)) + 
+  # Cov((Y - u1)I(Y > u1), (l2 - Y)I(Y < l2)) + 
+  # Cov((Y - u1)I(Y > u1), (Y - u2)I(Y > u2))
+  # ]
+  
+  # Cov((l1 - Y)I(Y < l1), (l2 - Y)I(Y < l2))
+  pt1 = lower1 * lower2 * (pltl12 - pltl1 * pltl2) + 
+    -lower2 * (condMeanLower12 * pltl12 - condMeanLower1 * pltl1 * pltl2) + 
+    -lower1 * (condMeanLower12 * pltl12 - pltl1 * condMeanLower2 * pltl2) + 
+    (condVarLower12 + condMeanLower12^2) * pltl12 - condMeanLower1 * condMeanLower2 * pltl1 * pltl2
+  
+  # Cov((l1 - Y)I(Y < l1), (Y - u2)I(Y > u2))
+  pt2 = -lower1 * upper2 * (piu2l1 - pltl1 * pgtu2) + 
+    upper2 * (condMeanLower1Upper2 * piu2l1 - condMeanLower1 * pltl1 * pgtu2) + 
+    lower1 * (condMeanLower1Upper2 * piu2l1 - pltl1 * condMeanUpper2 * pgtu2) + 
+    -((condVarLower1Upper2 + condMeanLower1Upper2^2) * piu2l1 - condMeanLower1 * pltl1 * condMeanUpper2 * pgtu2)
+  
+  # Cov((Y - u1)I(Y > u1), (l2 - Y)I(Y < l2))
+  pt3 = -upper1 * lower2 * (piu1l2 - pgtu1 * pltl2) + 
+    lower2 * (condMeanUpper1Lower2 * piu1l2 - pltl2 * condMeanUpper1 * pgtu1) + 
+    upper1 * (condMeanUpper1Lower2 * piu1l2 - condMeanLower2 * pltl2 * pgtu1) + 
+    -((condVarUpper1Lower2 + condMeanUpper1Lower2^2) * piu1l2 - condMeanUpper1 * pgtu1 * condMeanLower2 * pltl2)
+  
+  # Cov((Y - u1)I(Y > u1), (Y - u2)I(Y > u2))
+  pt4 = upper1 * upper2 * (pgtu12 - pgtu1 * pgtu2) + 
+    -upper2 * (condMeanUpper12 * pgtu12 - condMeanUpper1 * pgtu1 * pgtu2) + 
+    -upper1 * (condMeanUpper12 * pgtu12 - pgtu1 * condMeanUpper2 * pgtu2) + 
+    (condVarUpper12 + condMeanUpper12^2) * pgtu12 - condMeanUpper1 * pgtu1 * condMeanUpper2 * pgtu2
+  
+  res = (4/alpha^2) * (pt1 + pt2 + pt3 + pt4)
+  
+  if(!getAverage) {
+    res
+  } else {
+    weights = weights*(1/sum(weights, na.rm=TRUE))
+    sum((res)*weights, na.rm=na.rm)
+  }
+}
+
 # averages a list of many tables, each returned from the getScores function with distanceBreaks set by user
 averageBinnedScores = function(tableList) {
   
