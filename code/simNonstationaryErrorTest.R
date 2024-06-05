@@ -1302,7 +1302,6 @@ getTransitionErrVar = function(propMount=.3,
       #            main="Correct model selected", legend.mar=0)
       dev.off()
       
-      browser()
     }
     
   }
