@@ -1060,7 +1060,6 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
     origVarNamesWrong2 = paste(thisType, coreVarNames, "Wrong2", sep="")
     
     varNames = paste("this", coreVarNames, "s", sep="")
-    varNames = paste("this", coreVarNames, "s", sep="")
     varNamesWrong1 = paste("this", coreVarNames, "sWrong1", sep="")
     varNamesWrong2 = paste("this", coreVarNames, "sWrong2", sep="")
     
@@ -1075,12 +1074,16 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
                sapply(results, getName, thisName=origVarNamesWrong2[i]))
       } else {
         # in the case of K-fold, the length of each variable is length(Ks), not 1
+        thisI = typeI
+        if("LOO" %in% types) {
+          thisI = typeI - 1
+        }
         assign(varNames[i], 
-               sapply(results, getName, thisName=origVarNames[i], ind=typeI-1))
+               sapply(results, getName, thisName=origVarNames[i], ind=thisI))
         assign(varNamesWrong1[i], 
-               sapply(results, getName, thisName=origVarNamesWrong1[i], ind=typeI-1))
+               sapply(results, getName, thisName=origVarNamesWrong1[i], ind=thisI))
         assign(varNamesWrong2[i], 
-               sapply(results, getName, thisName=origVarNamesWrong2[i], ind=typeI-1))
+               sapply(results, getName, thisName=origVarNamesWrong2[i], ind=thisI))
       }
       
     }
