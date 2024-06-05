@@ -31,6 +31,7 @@ if(FALSE) {
   install.packages("deldir")
   install.packages("stringr")
   install.packages("RcppTN")
+  install.packages("mvtnorm")
   
   library(devtools)
   if(FALSE) {
@@ -76,6 +77,7 @@ library(plyr)
 library(deldir)
 library(stringr)
 library(RcppTN)
+library(mvtnorm)
 
 inf = sessionInfo()
 if(inf$platform == "x86_64-apple-darwin17.0 (64-bit)") {
