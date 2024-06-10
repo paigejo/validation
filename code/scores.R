@@ -1163,7 +1163,7 @@ expectedCRPS = function(truth, truth.var, est, est.var, getAverage=TRUE, na.rm=F
 # https://www.tandfonline.com/doi/pdf/10.1198/016214506000001437?casa_token=0vXXqMZ3M2IAAAAA:BYmw_z2zaASEcAvFrNDf6PQ157vq6FAQuDuI9depRZp44RJ_M8zbY47CN_KGXHMXP9CHJL02bTDT
 intervalScore = function(truth, est=NULL, var=NULL, lower=NULL, upper=NULL, 
                          estMat=NULL, significance=.8, returnIntervalWidth=FALSE, 
-                         returnCoverage=FALSE, doFuzzyReject=TRUE, getAverage=TRUE, ns=NULL, 
+                         returnCoverage=FALSE, doFuzzyReject=FALSE, getAverage=TRUE, ns=NULL, 
                          na.rm=FALSE, weights=rep(1, length(truth))) {
   
   # if more than 1 significance level, return results for each

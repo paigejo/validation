@@ -1048,7 +1048,12 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
       plotTitleType = "LOO"
     } else {
       thisType = "KFold"
-      plotTitleType = paste(Ks[typeI-1], "Fold", sep="-")
+      thisI = typeI
+      if("LOO" %in% types) {
+        thisI = typeI - 1
+      }
+      plotTitleType = paste(Ks[thisI], "Fold", sep="-")
+      plotTitleGridded = paste(Ks[thisI], "Block", sep="-")
     }
     
     coreVarNames = str_replace(methods, "IW", "IS")
@@ -1062,7 +1067,7 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
     varNames = paste("this", coreVarNames, "s", sep="")
     varNamesWrong1 = paste("this", coreVarNames, "sWrong1", sep="")
     varNamesWrong2 = paste("this", coreVarNames, "sWrong2", sep="")
-    
+    browser()
     for(i in 1:length(varNames)) {
       # get variables from the results
       if(thisType == "LOO") {
@@ -1084,6 +1089,15 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
                sapply(results, getName, thisName=origVarNamesWrong1[i], ind=thisI))
         assign(varNamesWrong2[i], 
                sapply(results, getName, thisName=origVarNamesWrong2[i], ind=thisI))
+        
+        if(i == 1) {
+          assign("thisGriddedCVs", 
+                 sapply(results, getName, thisName="griddedCVs", ind=thisI))
+          assign("thisGriddedCVsWrong1", 
+                 sapply(results, getName, thisName="griddedCVsWrong1", ind=thisI))
+          assign("thisGriddedCVsWrong2", 
+                 sapply(results, getName, thisName="griddedCVsWrong2", ind=thisI))
+        }
       }
       
     }
@@ -1590,36 +1604,74 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
     
     # Overall Score ----
     
-    methods = c(plotTitleType, 
-                "IW", "IWR", "IWR2", 
-                "IWP", "IWRP", "IWRP2", 
-                "VC", "VCR", "VCR2", 
-                "VCP", "VCPR", "VCPR2"
-                # "CVC", "CVCP", "CVCR", "CVCR2"
-    )
+    if(type == "LOO") {
+      methods = c(plotTitleType, 
+                  "IW", "IWR", "IWR2", 
+                  "IWP", "IWRP", "IWRP2", 
+                  "VC", "VCR", "VCR2", 
+                  "VCP", "VCPR", "VCPR2"
+                  # "CVC", "CVCP", "CVCR", "CVCR2"
+      )
+    } else {
+      methods = c(plotTitleType, 
+                  plotTitleGridded, 
+                  "IW", "IWR", "IWR2", 
+                  "IWP", "IWRP", "IWRP2", 
+                  "VC", "VCR", "VCR2", 
+                  "VCP", "VCPR", "VCPR2"
+                  # "CVC", "CVCP", "CVCR", "CVCR2"
+      )
+    }
+    
     # methods = methods[-c(match(c("this-VCP"), methods))]
     pdf(paste0(figureFolder, type,  "_CVMSE_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=8, height=6)
-    dat = data.frame(
-      Method=factor(rep(methods, each=niter), 
-                    levels=methods, ordered=FALSE), 
-      MSE=c((thisCVs - trueMSEs)^2, 
-            (thisISCVs - trueMSEs)^2, 
-            (thisISRCVs - trueMSEs)^2, 
-            (thisISR2CVs - trueMSEs)^2, 
-            (thisISPCVs - trueMSEs)^2, 
-            (thisISPRCVs - trueMSEs)^2, 
-            (thisISPR2CVs - trueMSEs)^2, 
-            (thisVCCVs - trueMSEs)^2, 
-            (thisVCRCVs - trueMSEs)^2, 
-            (thisVCPR2CVs - trueMSEs)^2, 
-            (thisVCPCVs - trueMSEs)^2, 
-            (thisVCPRCVs - trueMSEs)^2, 
-            (thisVCPR2CVs - trueMSEs)^2
-            # (thisCVCCVs - trueMSEs)^2, 
-            # (thisCVCPCVs - trueMSEs)^2,
-            # (thisCVCRCVs - trueMSEs)^2, 
-            # (thisCVCR2CVs - trueMSEs)^2)
-      ))
+    
+    if(type == "LOO") {
+      dat = data.frame(
+        Method=factor(rep(methods, each=niter), 
+                      levels=methods, ordered=FALSE), 
+        MSE=c((thisCVs - trueMSEs)^2, 
+              (thisISCVs - trueMSEs)^2, 
+              (thisISRCVs - trueMSEs)^2, 
+              (thisISR2CVs - trueMSEs)^2, 
+              (thisISPCVs - trueMSEs)^2, 
+              (thisISPRCVs - trueMSEs)^2, 
+              (thisISPR2CVs - trueMSEs)^2, 
+              (thisVCCVs - trueMSEs)^2, 
+              (thisVCRCVs - trueMSEs)^2, 
+              (thisVCPR2CVs - trueMSEs)^2, 
+              (thisVCPCVs - trueMSEs)^2, 
+              (thisVCPRCVs - trueMSEs)^2, 
+              (thisVCPR2CVs - trueMSEs)^2
+              # (thisCVCCVs - trueMSEs)^2, 
+              # (thisCVCPCVs - trueMSEs)^2,
+              # (thisCVCRCVs - trueMSEs)^2, 
+              # (thisCVCR2CVs - trueMSEs)^2)
+        ))
+    } else {
+      dat = data.frame(
+        Method=factor(rep(methods, each=niter), 
+                      levels=methods, ordered=FALSE), 
+        MSE=c((thisCVs - trueMSEs)^2, 
+              (thisGriddedCVs - trueMSEs)^2, 
+              (thisISCVs - trueMSEs)^2, 
+              (thisISRCVs - trueMSEs)^2, 
+              (thisISR2CVs - trueMSEs)^2, 
+              (thisISPCVs - trueMSEs)^2, 
+              (thisISPRCVs - trueMSEs)^2, 
+              (thisISPR2CVs - trueMSEs)^2, 
+              (thisVCCVs - trueMSEs)^2, 
+              (thisVCRCVs - trueMSEs)^2, 
+              (thisVCPR2CVs - trueMSEs)^2, 
+              (thisVCPCVs - trueMSEs)^2, 
+              (thisVCPRCVs - trueMSEs)^2, 
+              (thisVCPR2CVs - trueMSEs)^2
+              # (thisCVCCVs - trueMSEs)^2, 
+              # (thisCVCPCVs - trueMSEs)^2,
+              # (thisCVCRCVs - trueMSEs)^2, 
+              # (thisCVCR2CVs - trueMSEs)^2)
+        ))
+    }
     boxplot(MSE~Method, data=dat, col="skyblue", log="y", ylab="Estimator Sq. Err.")
     dev.off()
     
@@ -1642,27 +1694,52 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
     ggsave(paste0(figureFolder, type,  "_CVMSEerr_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), p, width=8, height=6)
     
     pdf(paste0(figureFolder, type,  "_CVMSEWrong1_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=8, height=6)
-    dat = data.frame(
-      Method=factor(rep(methods, each=niter), 
-                    levels=methods, ordered=FALSE), 
-      MSE=c((thisCVsWrong1 - wrongMSEs1)^2, 
-            (thisISCVsWrong1 - wrongMSEs1)^2, 
-            (thisISRCVsWrong1 - wrongMSEs1)^2, 
-            (thisISR2CVsWrong1 - wrongMSEs1)^2, 
-            (thisISPCVsWrong1 - wrongMSEs1)^2, 
-            (thisISPRCVsWrong1 - wrongMSEs1)^2, 
-            (thisISPR2CVsWrong1 - wrongMSEs1)^2, 
-            (thisVCCVsWrong1 - wrongMSEs1)^2, 
-            (thisVCRCVsWrong1 - wrongMSEs1)^2, 
-            (thisVCR2CVsWrong1 - wrongMSEs1)^2, 
-            (thisVCPCVsWrong1 - wrongMSEs1)^2, 
-            (thisVCPRCVsWrong1 - wrongMSEs1)^2, 
-            (thisVCPR2CVsWrong1 - wrongMSEs1)^2
-            # (thisCVCCVsWrong1 - wrongMSEs1)^2, 
-            # (thisCVCPCVsWrong1 - wrongMSEs1)^2,
-            # (thisCVCRCVsWrong1 - wrongMSEs1)^2, 
-            # (thisCVCR2CVsWrong1 - wrongMSEs1)^2)
-      ))
+    if(type == "LOO") {
+      dat = data.frame(
+        Method=factor(rep(methods, each=niter), 
+                      levels=methods, ordered=FALSE), 
+        MSE=c((thisCVsWrong1 - wrongMSEs1)^2, 
+              (thisISCVsWrong1 - wrongMSEs1)^2, 
+              (thisISRCVsWrong1 - wrongMSEs1)^2, 
+              (thisISR2CVsWrong1 - wrongMSEs1)^2, 
+              (thisISPCVsWrong1 - wrongMSEs1)^2, 
+              (thisISPRCVsWrong1 - wrongMSEs1)^2, 
+              (thisISPR2CVsWrong1 - wrongMSEs1)^2, 
+              (thisVCCVsWrong1 - wrongMSEs1)^2, 
+              (thisVCRCVsWrong1 - wrongMSEs1)^2, 
+              (thisVCR2CVsWrong1 - wrongMSEs1)^2, 
+              (thisVCPCVsWrong1 - wrongMSEs1)^2, 
+              (thisVCPRCVsWrong1 - wrongMSEs1)^2, 
+              (thisVCPR2CVsWrong1 - wrongMSEs1)^2
+              # (thisCVCCVsWrong1 - wrongMSEs1)^2, 
+              # (thisCVCPCVsWrong1 - wrongMSEs1)^2,
+              # (thisCVCRCVsWrong1 - wrongMSEs1)^2, 
+              # (thisCVCR2CVsWrong1 - wrongMSEs1)^2)
+        ))
+    } else {
+      dat = data.frame(
+        Method=factor(rep(methods, each=niter), 
+                      levels=methods, ordered=FALSE), 
+        MSE=c((thisCVsWrong1 - wrongMSEs1)^2, 
+              (thisGriddedCVsWrong1 - wrongMSEs1)^2, 
+              (thisISCVsWrong1 - wrongMSEs1)^2, 
+              (thisISRCVsWrong1 - wrongMSEs1)^2, 
+              (thisISR2CVsWrong1 - wrongMSEs1)^2, 
+              (thisISPCVsWrong1 - wrongMSEs1)^2, 
+              (thisISPRCVsWrong1 - wrongMSEs1)^2, 
+              (thisISPR2CVsWrong1 - wrongMSEs1)^2, 
+              (thisVCCVsWrong1 - wrongMSEs1)^2, 
+              (thisVCRCVsWrong1 - wrongMSEs1)^2, 
+              (thisVCR2CVsWrong1 - wrongMSEs1)^2, 
+              (thisVCPCVsWrong1 - wrongMSEs1)^2, 
+              (thisVCPRCVsWrong1 - wrongMSEs1)^2, 
+              (thisVCPR2CVsWrong1 - wrongMSEs1)^2
+              # (thisCVCCVsWrong1 - wrongMSEs1)^2, 
+              # (thisCVCPCVsWrong1 - wrongMSEs1)^2,
+              # (thisCVCRCVsWrong1 - wrongMSEs1)^2, 
+              # (thisCVCR2CVsWrong1 - wrongMSEs1)^2)
+        ))
+    }
     boxplot(MSE~Method, data=dat, col="skyblue", log="y", ylab="Estimator Sq. Err.")
     dev.off()
     
@@ -1685,27 +1762,53 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
     ggsave(paste0(figureFolder, type,  "_CVMSEerrWrong1_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), p, width=8, height=6)
     
     pdf(paste0(figureFolder, type,  "_CVMSEWrong2_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=8, height=6)
-    dat = data.frame(
-      Method=factor(rep(methods, each=niter), 
-                    levels=methods, ordered=FALSE), 
-      MSE=c((thisCVsWrong2 - wrongMSEs2)^2, 
-            (thisISCVsWrong2 - wrongMSEs2)^2, 
-            (thisISRCVsWrong2 - wrongMSEs2)^2, 
-            (thisISR2CVsWrong2 - wrongMSEs2)^2, 
-            (thisISPCVsWrong2 - wrongMSEs2)^2, 
-            (thisISPRCVsWrong2 - wrongMSEs2)^2, 
-            (thisISPR2CVsWrong2 - wrongMSEs2)^2, 
-            (thisVCCVsWrong2 - wrongMSEs2)^2, 
-            (thisVCRCVsWrong2 - wrongMSEs2)^2, 
-            (thisVCR2CVsWrong2 - wrongMSEs2)^2, 
-            (thisVCPCVsWrong2 - wrongMSEs2)^2, 
-            (thisVCPRCVsWrong2 - wrongMSEs2)^2, 
-            (thisVCPR2CVsWrong2 - wrongMSEs2)^2
-            # (thisCVCCVsWrong2 - wrongMSEs2)^2, 
-            # (thisCVCPCVsWrong2 - wrongMSEs2)^2,
-            # (thisCVCRCVsWrong2 - wrongMSEs2)^2, 
-            # (thisCVCR2CVsWrong2 - wrongMSEs2)^2)
-      ))
+    if(type == "LOO") {
+      dat = data.frame(
+        Method=factor(rep(methods, each=niter), 
+                      levels=methods, ordered=FALSE), 
+        MSE=c((thisCVsWrong2 - wrongMSEs2)^2, 
+              (thisISCVsWrong2 - wrongMSEs2)^2, 
+              (thisISRCVsWrong2 - wrongMSEs2)^2, 
+              (thisISR2CVsWrong2 - wrongMSEs2)^2, 
+              (thisISPCVsWrong2 - wrongMSEs2)^2, 
+              (thisISPRCVsWrong2 - wrongMSEs2)^2, 
+              (thisISPR2CVsWrong2 - wrongMSEs2)^2, 
+              (thisVCCVsWrong2 - wrongMSEs2)^2, 
+              (thisVCRCVsWrong2 - wrongMSEs2)^2, 
+              (thisVCR2CVsWrong2 - wrongMSEs2)^2, 
+              (thisVCPCVsWrong2 - wrongMSEs2)^2, 
+              (thisVCPRCVsWrong2 - wrongMSEs2)^2, 
+              (thisVCPR2CVsWrong2 - wrongMSEs2)^2
+              # (thisCVCCVsWrong2 - wrongMSEs2)^2, 
+              # (thisCVCPCVsWrong2 - wrongMSEs2)^2,
+              # (thisCVCRCVsWrong2 - wrongMSEs2)^2, 
+              # (thisCVCR2CVsWrong2 - wrongMSEs2)^2)
+        ))
+    } else {
+      dat = data.frame(
+        Method=factor(rep(methods, each=niter), 
+                      levels=methods, ordered=FALSE), 
+        MSE=c((thisCVsWrong2 - wrongMSEs2)^2, 
+              (thisGriddedCVsWrong2 - wrongMSEs2)^2, 
+              (thisISCVsWrong2 - wrongMSEs2)^2, 
+              (thisISRCVsWrong2 - wrongMSEs2)^2, 
+              (thisISR2CVsWrong2 - wrongMSEs2)^2, 
+              (thisISPCVsWrong2 - wrongMSEs2)^2, 
+              (thisISPRCVsWrong2 - wrongMSEs2)^2, 
+              (thisISPR2CVsWrong2 - wrongMSEs2)^2, 
+              (thisVCCVsWrong2 - wrongMSEs2)^2, 
+              (thisVCRCVsWrong2 - wrongMSEs2)^2, 
+              (thisVCR2CVsWrong2 - wrongMSEs2)^2, 
+              (thisVCPCVsWrong2 - wrongMSEs2)^2, 
+              (thisVCPRCVsWrong2 - wrongMSEs2)^2, 
+              (thisVCPR2CVsWrong2 - wrongMSEs2)^2
+              # (thisCVCCVsWrong2 - wrongMSEs2)^2, 
+              # (thisCVCPCVsWrong2 - wrongMSEs2)^2,
+              # (thisCVCRCVsWrong2 - wrongMSEs2)^2, 
+              # (thisCVCR2CVsWrong2 - wrongMSEs2)^2)
+        ))
+    }
+    
     boxplot(MSE~Method, data=dat, col="skyblue", log="y", ylab="Estimator Sq. Err.")
     dev.off()
     
@@ -1728,27 +1831,53 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
     ggsave(paste0(figureFolder, type,  "_CVMSEerrWrong2_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), p, width=8, height=6)
     
     pdf(paste0(figureFolder, type,  "_CVMSEWrong12_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=8, height=6)
-    dat = data.frame(
-      Method=factor(rep(methods, each=niter), 
-                    levels=methods, ordered=FALSE), 
-      MSE=c((thisCVsWrong1 - thisCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
-            (thisISCVsWrong1 - thisISCVsWrong1 - (wrongMSEs1 - wrongMSEs2))^2, 
-            (thisISRCVsWrong1 - thisISRCVsWrong1 - (wrongMSEs1 - wrongMSEs2))^2, 
-            (thisISR2CVsWrong1 - thisISR2CVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
-            (thisISPCVsWrong1 - thisISPCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
-            (thisISPRCVsWrong1 - thisISPRCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
-            (thisISPR2CVsWrong1 - thisISPR2CVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
-            (thisVCCVsWrong1 - thisVCCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
-            (thisVCRCVsWrong1 - thisVCRCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
-            (thisVCR2CVsWrong1 - thisVCR2CVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
-            (thisVCPCVsWrong1 - thisVCPCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
-            (thisVCPRCVsWrong1 - thisVCPRCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
-            (thisVCPR2CVsWrong1 - thisVCPR2CVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2
-            # (thisCVCCVsWrong1 - thisCVCCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
-            # (thisCVCPCVsWrong1 - thisCVCPCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2,
-            # (thisCVCRCVsWrong1 - thisCVCRCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
-            # (thisCVCR2CVsWrong1 - thisCVCR2CVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2)
-      ))
+    if(type == "LOO") {
+      dat = data.frame(
+        Method=factor(rep(methods, each=niter), 
+                      levels=methods, ordered=FALSE), 
+        MSE=c((thisCVsWrong1 - thisCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
+              (thisISCVsWrong1 - thisISCVsWrong1 - (wrongMSEs1 - wrongMSEs2))^2, 
+              (thisISRCVsWrong1 - thisISRCVsWrong1 - (wrongMSEs1 - wrongMSEs2))^2, 
+              (thisISR2CVsWrong1 - thisISR2CVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
+              (thisISPCVsWrong1 - thisISPCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
+              (thisISPRCVsWrong1 - thisISPRCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
+              (thisISPR2CVsWrong1 - thisISPR2CVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
+              (thisVCCVsWrong1 - thisVCCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
+              (thisVCRCVsWrong1 - thisVCRCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
+              (thisVCR2CVsWrong1 - thisVCR2CVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
+              (thisVCPCVsWrong1 - thisVCPCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
+              (thisVCPRCVsWrong1 - thisVCPRCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
+              (thisVCPR2CVsWrong1 - thisVCPR2CVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2
+              # (thisCVCCVsWrong1 - thisCVCCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
+              # (thisCVCPCVsWrong1 - thisCVCPCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2,
+              # (thisCVCRCVsWrong1 - thisCVCRCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
+              # (thisCVCR2CVsWrong1 - thisCVCR2CVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2)
+        ))
+    } else {
+      dat = data.frame(
+        Method=factor(rep(methods, each=niter), 
+                      levels=methods, ordered=FALSE), 
+        MSE=c((thisCVsWrong1 - thisCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
+              (thisGriddedCVsWrong1 - thisGriddedCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
+              (thisISCVsWrong1 - thisISCVsWrong1 - (wrongMSEs1 - wrongMSEs2))^2, 
+              (thisISRCVsWrong1 - thisISRCVsWrong1 - (wrongMSEs1 - wrongMSEs2))^2, 
+              (thisISR2CVsWrong1 - thisISR2CVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
+              (thisISPCVsWrong1 - thisISPCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
+              (thisISPRCVsWrong1 - thisISPRCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
+              (thisISPR2CVsWrong1 - thisISPR2CVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
+              (thisVCCVsWrong1 - thisVCCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
+              (thisVCRCVsWrong1 - thisVCRCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
+              (thisVCR2CVsWrong1 - thisVCR2CVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
+              (thisVCPCVsWrong1 - thisVCPCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
+              (thisVCPRCVsWrong1 - thisVCPRCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
+              (thisVCPR2CVsWrong1 - thisVCPR2CVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2
+              # (thisCVCCVsWrong1 - thisCVCCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
+              # (thisCVCPCVsWrong1 - thisCVCPCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2,
+              # (thisCVCRCVsWrong1 - thisCVCRCVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2, 
+              # (thisCVCR2CVsWrong1 - thisCVCR2CVsWrong2 - (wrongMSEs1 - wrongMSEs2))^2)
+        ))
+    }
+    
     boxplot(MSE~Method, data=dat, col="skyblue", log="y", ylab="Estimator Sq. Err.")
     dev.off()
     
@@ -1771,47 +1900,97 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
     ggsave(paste0(figureFolder, type,  "_CVMSEerrWrong12_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), p, width=8, height=6)
     
     pdf(paste0(figureFolder, type,  "_CVMRE_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=6, height=6)
-    dat = data.frame(
-      Method=rep(c(plotTitleType, "IW", "VC", "IWR"), each=niter), 
-      sqResids=c(thisCVs/trueMSEs, 
-                 thisISCVs/trueMSEs, 
-                 thisVCCVs/trueMSEs, 
-                 thisISRCVs/trueMSEs))
+    if(type == "LOO") {
+      dat = data.frame(
+        Method=rep(c(plotTitleType, "IW", "VC", "IWR"), each=niter), 
+        sqResids=c(thisCVs/trueMSEs, 
+                   thisISCVs/trueMSEs, 
+                   thisVCCVs/trueMSEs, 
+                   thisISRCVs/trueMSEs))
+    } else {
+      dat = data.frame(
+        Method=rep(c(plotTitleType, plotTitleGridded, "IW", "VC", "IWR"), each=niter), 
+        sqResids=c(thisCVs/trueMSEs, 
+                   thisGriddedCVs/trueMSEs, 
+                   thisISCVs/trueMSEs, 
+                   thisVCCVs/trueMSEs, 
+                   thisISRCVs/trueMSEs))
+    }
+    
     boxplot(sqResids~Method, data=dat, log="y", col="skyblue", ylab="Estimator Rel. Err.")
     dev.off()
     
     pdf(paste0(figureFolder, type,  "_CVMSE_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=8, height=6)
-    dat = data.frame(
-      Method=factor(rep(c(plotTitleType, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), each=niter), 
-                    levels=c(plotTitleType, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), ordered=FALSE), 
-      MSE=c((thisCVs - trueMSEs)^2, 
-            (thisISCVs - trueMSEs)^2, 
-            (thisISPCVs - trueMSEs)^2, 
-            (thisISPR2CVs - trueMSEs)^2, 
-            (thisVCCVs - trueMSEs)^2, 
-            (thisVCRCVs - trueMSEs)^2, 
-            (thisVCR2CVs - trueMSEs)^2, 
-            (thisVCPCVs - trueMSEs)^2, 
-            (thisVCPRCVs - trueMSEs)^2, 
-            (thisVCPR2CVs - trueMSEs)^2))
-    boxplot(MSE~Method, data=dat, col="skyblue", log="y", ylab="Estimator Sq. Err.")
-    dev.off()
+    if(type == "LOO") {
+      dat = data.frame(
+        Method=factor(rep(c(plotTitleType, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), each=niter), 
+                      levels=c(plotTitleType, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), ordered=FALSE), 
+        MSE=c((thisCVs - trueMSEs)^2, 
+              (thisISCVs - trueMSEs)^2, 
+              (thisISPCVs - trueMSEs)^2, 
+              (thisISPR2CVs - trueMSEs)^2, 
+              (thisVCCVs - trueMSEs)^2, 
+              (thisVCRCVs - trueMSEs)^2, 
+              (thisVCR2CVs - trueMSEs)^2, 
+              (thisVCPCVs - trueMSEs)^2, 
+              (thisVCPRCVs - trueMSEs)^2, 
+              (thisVCPR2CVs - trueMSEs)^2))
+      boxplot(MSE~Method, data=dat, col="skyblue", log="y", ylab="Estimator Sq. Err.")
+      dev.off()
+    } else {
+      dat = data.frame(
+        Method=factor(rep(c(plotTitleType, plotGriddedType, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), each=niter), 
+                      levels=c(plotTitleType, plotGriddedType, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), ordered=FALSE), 
+        MSE=c((thisCVs - trueMSEs)^2, 
+              (thisGriddedCVs - trueMSEs)^2, 
+              (thisISCVs - trueMSEs)^2, 
+              (thisISPCVs - trueMSEs)^2, 
+              (thisISPR2CVs - trueMSEs)^2, 
+              (thisVCCVs - trueMSEs)^2, 
+              (thisVCRCVs - trueMSEs)^2, 
+              (thisVCR2CVs - trueMSEs)^2, 
+              (thisVCPCVs - trueMSEs)^2, 
+              (thisVCPRCVs - trueMSEs)^2, 
+              (thisVCPR2CVs - trueMSEs)^2))
+      boxplot(MSE~Method, data=dat, col="skyblue", log="y", ylab="Estimator Sq. Err.")
+      dev.off()
+      
+    }
+    
     
     
     # pdf(paste0(figureFolder, type,  "_selProbErr_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=8, height=6)
-    dat = data.frame(
-      Method=factor(rep(c(plotTitleType, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), each=niter), 
-                    levels=c(plotTitleType, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), ordered=FALSE), 
-      Probability=c((thisCVs - thisCVsWrong1 < 0) & (thisCVs - thisCVsWrong2 < 0), 
-                    (thisISCVs - thisISCVsWrong1 < 0) & (thisISCVs - thisISCVsWrong2 < 0), 
-                    (thisISPCVs - thisISPCVsWrong1 < 0) & (thisISPCVs - thisISPCVsWrong2 < 0), 
-                    (thisISPR2CVs - thisISPR2CVsWrong1 < 0) & (thisISPR2CVs - thisISPR2CVsWrong2 < 0), 
-                    (thisVCCVs - thisVCCVsWrong1 < 0) & (thisVCCVs - thisVCCVsWrong2 < 0), 
-                    (thisVCRCVs - thisVCRCVsWrong1 < 0) & (thisVCRCVs - thisVCRCVsWrong2 < 0), 
-                    (thisVCR2CVs - thisVCR2CVsWrong1 < 0) & (thisVCR2CVs - thisVCR2CVsWrong2 < 0), 
-                    (thisVCPCVs - thisVCPCVsWrong1 < 0) & (thisVCPCVs - thisVCPCVsWrong2 < 0), 
-                    (thisVCPRCVs - thisVCPRCVsWrong1 < 0) & (thisVCPRCVs - thisVCPRCVsWrong2 < 0), 
-                    (thisVCPR2CVs - thisVCPR2CVsWrong1 < 0) & (thisVCPR2CVs - thisVCPR2CVsWrong2 < 0)))
+    if(type == "LOO") {
+      dat = data.frame(
+        Method=factor(rep(c(plotTitleType, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), each=niter), 
+                      levels=c(plotTitleType, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), ordered=FALSE), 
+        Probability=c((thisCVs - thisCVsWrong1 < 0) & (thisCVs - thisCVsWrong2 < 0), 
+                      (thisISCVs - thisISCVsWrong1 < 0) & (thisISCVs - thisISCVsWrong2 < 0), 
+                      (thisISPCVs - thisISPCVsWrong1 < 0) & (thisISPCVs - thisISPCVsWrong2 < 0), 
+                      (thisISPR2CVs - thisISPR2CVsWrong1 < 0) & (thisISPR2CVs - thisISPR2CVsWrong2 < 0), 
+                      (thisVCCVs - thisVCCVsWrong1 < 0) & (thisVCCVs - thisVCCVsWrong2 < 0), 
+                      (thisVCRCVs - thisVCRCVsWrong1 < 0) & (thisVCRCVs - thisVCRCVsWrong2 < 0), 
+                      (thisVCR2CVs - thisVCR2CVsWrong1 < 0) & (thisVCR2CVs - thisVCR2CVsWrong2 < 0), 
+                      (thisVCPCVs - thisVCPCVsWrong1 < 0) & (thisVCPCVs - thisVCPCVsWrong2 < 0), 
+                      (thisVCPRCVs - thisVCPRCVsWrong1 < 0) & (thisVCPRCVs - thisVCPRCVsWrong2 < 0), 
+                      (thisVCPR2CVs - thisVCPR2CVsWrong1 < 0) & (thisVCPR2CVs - thisVCPR2CVsWrong2 < 0)))
+    } else {
+      dat = data.frame(
+        Method=factor(rep(c(plotTitleType, plotGriddedType, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), each=niter), 
+                      levels=c(plotTitleType, plotGriddedType, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), ordered=FALSE), 
+        Probability=c((thisCVs - thisCVsWrong1 < 0) & (thisCVs - thisCVsWrong2 < 0), 
+                      (thisGriddedCVs - thisCVsWrong1 < 0) & (thisGriddedCVs - thisCVsWrong2 < 0), 
+                      (thisISCVs - thisISCVsWrong1 < 0) & (thisISCVs - thisISCVsWrong2 < 0), 
+                      (thisISPCVs - thisISPCVsWrong1 < 0) & (thisISPCVs - thisISPCVsWrong2 < 0), 
+                      (thisISPR2CVs - thisISPR2CVsWrong1 < 0) & (thisISPR2CVs - thisISPR2CVsWrong2 < 0), 
+                      (thisVCCVs - thisVCCVsWrong1 < 0) & (thisVCCVs - thisVCCVsWrong2 < 0), 
+                      (thisVCRCVs - thisVCRCVsWrong1 < 0) & (thisVCRCVs - thisVCRCVsWrong2 < 0), 
+                      (thisVCR2CVs - thisVCR2CVsWrong1 < 0) & (thisVCR2CVs - thisVCR2CVsWrong2 < 0), 
+                      (thisVCPCVs - thisVCPCVsWrong1 < 0) & (thisVCPCVs - thisVCPCVsWrong2 < 0), 
+                      (thisVCPRCVs - thisVCPRCVsWrong1 < 0) & (thisVCPRCVs - thisVCPRCVsWrong2 < 0), 
+                      (thisVCPR2CVs - thisVCPR2CVsWrong1 < 0) & (thisVCPR2CVs - thisVCPR2CVsWrong2 < 0)))
+    }
+    
     datac <- summarySEwithin(dat, measurevar="Probability", withinvars=c("Method"))
     #>    Shape   ColorScheme  N     Time Time_norm       sd        se        ci
     #> 1  Round       Colored 12 43.58333  43.58333 1.212311 0.3499639 0.7702654
@@ -1830,19 +2009,69 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
     ggsave(paste0(figureFolder, type,  "_selProbErr_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), p, width=8, height=6)
     
     # pdf(paste0(figureFolder, type,  "_selProbErr12_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=8, height=6)
-    dat = data.frame(
-      Method=factor(rep(c(plotTitleType, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), each=niter), 
-                    levels=c(plotTitleType, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), ordered=FALSE), 
-      Probability=c((thisCVsWrong1 < thisCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
-                    (thisISCVsWrong1 < thisISCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
-                    (thisISPCVsWrong1 < thisISPCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
-                    (thisISPR2CVsWrong1 < thisISPR2CVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
-                    (thisVCCVsWrong1 < thisVCCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
-                    (thisVCRCVsWrong1 < thisVCRCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
-                    (thisVCR2CVsWrong1 < thisVCR2CVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
-                    (thisVCPCVsWrong1 < thisVCPCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
-                    (thisVCPRCVsWrong1 < thisVCPRCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
-                    (thisVCPR2CVsWrong1 < thisVCPR2CVsWrong2) == (wrongMSEs1 < wrongMSEs2)))
+    if(type == "LOO") {
+      dat = data.frame(
+        Method=factor(rep(c(plotTitleType, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), each=niter), 
+                      levels=c(plotTitleType, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), ordered=FALSE), 
+        Probability=c((thisCVsWrong1 < thisCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                      (thisISCVsWrong1 < thisISCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                      (thisISPCVsWrong1 < thisISPCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                      (thisISPR2CVsWrong1 < thisISPR2CVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                      (thisVCCVsWrong1 < thisVCCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                      (thisVCRCVsWrong1 < thisVCRCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                      (thisVCR2CVsWrong1 < thisVCR2CVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                      (thisVCPCVsWrong1 < thisVCPCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                      (thisVCPRCVsWrong1 < thisVCPRCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                      (thisVCPR2CVsWrong1 < thisVCPR2CVsWrong2) == (wrongMSEs1 < wrongMSEs2)))
+    } else {
+      dat = data.frame(
+        Method=factor(rep(c(plotTitleType, plotTitleGridded, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), each=niter), 
+                      levels=c(plotTitleType, plotTitleGridded, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), ordered=FALSE), 
+        Probability=c((thisCVsWrong1 < thisCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                      (thisGriddedCVsWrong1 < thisGriddedCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                      (thisISCVsWrong1 < thisISCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                      (thisISPCVsWrong1 < thisISPCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                      (thisISPR2CVsWrong1 < thisISPR2CVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                      (thisVCCVsWrong1 < thisVCCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                      (thisVCRCVsWrong1 < thisVCRCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                      (thisVCR2CVsWrong1 < thisVCR2CVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                      (thisVCPCVsWrong1 < thisVCPCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                      (thisVCPRCVsWrong1 < thisVCPRCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                      (thisVCPR2CVsWrong1 < thisVCPR2CVsWrong2) == (wrongMSEs1 < wrongMSEs2)))
+    }
+    
+    # pdf(paste0(figureFolder, type,  "_selProbErr12_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=8, height=6)
+    if(type == "LOO") {
+      dat = data.frame(
+        Method=factor(rep(c(plotTitleType, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), each=niter), 
+                      levels=c(plotTitleType, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), ordered=FALSE), 
+        Probability=c((thisCVsWrong1 < thisCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                      (thisISCVsWrong1 < thisISCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                      (thisISPCVsWrong1 < thisISPCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                      (thisISPR2CVsWrong1 < thisISPR2CVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                      (thisVCCVsWrong1 < thisVCCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                      (thisVCRCVsWrong1 < thisVCRCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                      (thisVCR2CVsWrong1 < thisVCR2CVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                      (thisVCPCVsWrong1 < thisVCPCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                      (thisVCPRCVsWrong1 < thisVCPRCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                      (thisVCPR2CVsWrong1 < thisVCPR2CVsWrong2) == (wrongMSEs1 < wrongMSEs2)))
+    } else {
+      dat = data.frame(
+        Method=factor(rep(c(plotTitleType, plotTitleGridded, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), each=niter), 
+                      levels=c(plotTitleType, plotTitleGridded, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), ordered=FALSE), 
+        Probability=c((thisCVsWrong1 < thisCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                      (thisGriddedCVsWrong1 < thisGriddedCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                      (thisISCVsWrong1 < thisISCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                      (thisISPCVsWrong1 < thisISPCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                      (thisISPR2CVsWrong1 < thisISPR2CVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                      (thisVCCVsWrong1 < thisVCCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                      (thisVCRCVsWrong1 < thisVCRCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                      (thisVCR2CVsWrong1 < thisVCR2CVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                      (thisVCPCVsWrong1 < thisVCPCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                      (thisVCPRCVsWrong1 < thisVCPRCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                      (thisVCPR2CVsWrong1 < thisVCPR2CVsWrong2) == (wrongMSEs1 < wrongMSEs2)))
+    }
+    
     datac <- summarySEwithin(dat, measurevar="Probability", withinvars=c("Method"))
     #>    Shape   ColorScheme  N     Time Time_norm       sd        se        ci
     #> 1  Round       Colored 12 43.58333  43.58333 1.212311 0.3499639 0.7702654
@@ -1861,6 +2090,51 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
     ggsave(paste0(figureFolder, type,  "_selProbErr12_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), p, width=8, height=6)
     
     browser()
+    
+    # plot model selection score
+    diffMSEs = wrongMSEs1 - wrongMSEs2
+    # pdf(paste0(figureFolder, type,  "_selProbErr12_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=8, height=6)
+    if(type == "LOO") {
+      dat = data.frame(
+        Method=factor(rep(c(plotTitleType, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), each=niter), 
+                      levels=c(plotTitleType, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), ordered=FALSE), 
+        Score=(2*c((thisCVsWrong1 < thisCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                (thisISCVsWrong1 < thisISCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                (thisISPCVsWrong1 < thisISPCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                (thisISPR2CVsWrong1 < thisISPR2CVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                (thisVCCVsWrong1 < thisVCCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                (thisVCRCVsWrong1 < thisVCRCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                (thisVCR2CVsWrong1 < thisVCR2CVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                (thisVCPCVsWrong1 < thisVCPCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                (thisVCPRCVsWrong1 < thisVCPRCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                (thisVCPR2CVsWrong1 < thisVCPR2CVsWrong2) == (wrongMSEs1 < wrongMSEs2))-1)*abs(diffMSEs))
+    } else {
+      dat = data.frame(
+        Method=factor(rep(c(plotTitleType, plotTitleGridded, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), each=niter), 
+                      levels=c(plotTitleType, plotTitleGridded, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), ordered=FALSE), 
+        Score=(2*c((thisCVsWrong1 < thisCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                   (thisGriddedCVsWrong1 < thisGriddedCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                   (thisISCVsWrong1 < thisISCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                   (thisISPCVsWrong1 < thisISPCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                   (thisISPR2CVsWrong1 < thisISPR2CVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                   (thisVCCVsWrong1 < thisVCCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                   (thisVCRCVsWrong1 < thisVCRCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                   (thisVCR2CVsWrong1 < thisVCR2CVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                   (thisVCPCVsWrong1 < thisVCPCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                   (thisVCPRCVsWrong1 < thisVCPRCVsWrong2) == (wrongMSEs1 < wrongMSEs2), 
+                   (thisVCPR2CVsWrong1 < thisVCPR2CVsWrong2) == (wrongMSEs1 < wrongMSEs2))-1)*abs(diffMSEs))
+    }
+    
+    datac <- summarySEwithin(dat, measurevar="Score", withinvars=c("Method"))
+    p = ggplot(datac, aes(x=Method, y=Score)) +
+      geom_bar(position=position_dodge(.9), colour="black", stat="identity") +
+      geom_errorbar(position=position_dodge(.9), width=.25, aes(ymin=Score-ci, ymax=Score+ci)) +
+      theme_bw()
+    ggsave(paste0(figureFolder, type,  "_selScoreErr12_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), p, width=8, height=6)
+    
+    pdf(paste0(figureFolder, type,  "_selScore12_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), width=8, height=6)
+    boxplot(Score~Method, data=dat, col="skyblue", ylab="Estimator Sq. Err.")
+    dev.off()
     
     if(FALSE) {
       print(paste0("MSE of CV: ", mean((thisCVs - trueMSEs)^2)))

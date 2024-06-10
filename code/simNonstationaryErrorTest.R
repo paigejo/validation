@@ -251,9 +251,12 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
         # blockCVsWrong2[j] = mean((testYs - muAcondBWrong2)^2)
         
         # calculate CRPS for the grid cell
-        blockCVs[j] = crps(truth=testYs, est=muAcondB, est.var=varAcondB)
-        blockCVsWrong1[j] = crps(truth=testYs, est=muAcondBWrong1, est.var=varAcondBWrong1)
-        blockCVsWrong2[j] = crps(truth=testYs, est=muAcondBWrong2, est.var=varAcondBWrong2)
+        # blockCVs[j] = crps(truth=testYs, est=muAcondB, est.var=varAcondB)
+        # blockCVsWrong1[j] = crps(truth=testYs, est=muAcondBWrong1, est.var=varAcondBWrong1)
+        # blockCVsWrong2[j] = crps(truth=testYs, est=muAcondBWrong2, est.var=varAcondBWrong2)
+        blockCVs[j] = intervalScore(truth=testYs, est=muAcondB, var=varAcondB)
+        blockCVsWrong1[j] = intervalScore(truth=testYs, est=muAcondBWrong1, var=varAcondBWrong1)
+        blockCVsWrong2[j] = intervalScore(truth=testYs, est=muAcondBWrong2, var=varAcondBWrong2)
       } else {
         blockCVs[j] = NA
         blockCVsWrong1[j] = NA
@@ -392,9 +395,12 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
       # foldCVsWrong2[i] = mean((testYs - muAcondBWrong2)^2)
       
       # calculate CRPS for each observation in the fold
-      KFoldCVs[isTest,i] = crps(truth=testYs, est=muAcondB, est.var=varAcondB, getAverage = FALSE)
-      KFoldCVsWrong1[isTest,i] = crps(truth=testYs, est=muAcondBWrong1, est.var=varAcondBWrong1, getAverage = FALSE)
-      KFoldCVsWrong2[isTest,i] = crps(truth=testYs, est=muAcondBWrong2, est.var=varAcondBWrong2, getAverage = FALSE)
+      # KFoldCVs[isTest,i] = crps(truth=testYs, est=muAcondB, est.var=varAcondB, getAverage = FALSE)
+      # KFoldCVsWrong1[isTest,i] = crps(truth=testYs, est=muAcondBWrong1, est.var=varAcondBWrong1, getAverage = FALSE)
+      # KFoldCVsWrong2[isTest,i] = crps(truth=testYs, est=muAcondBWrong2, est.var=varAcondBWrong2, getAverage = FALSE)
+      KFoldCVs[isTest,i] = intervalScore(truth=testYs, est=muAcondB, var=varAcondB, getAverage = FALSE)
+      KFoldCVsWrong1[isTest,i] = intervalScore(truth=testYs, est=muAcondBWrong1, var=varAcondBWrong1, getAverage = FALSE)
+      KFoldCVsWrong2[isTest,i] = intervalScore(truth=testYs, est=muAcondBWrong2, var=varAcondBWrong2, getAverage = FALSE)
     }
     
     # average over CRPSs of each observation over all folds, for each value of K
@@ -542,9 +548,12 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
       varAcondBWrong2 = condDistnWrong2$varAcondB
       
       # calculate MSE for the grid cell
-      LOOCVs[i] = crps(truth=testYs, est=muAcondB, est.var=varAcondB)
-      LOOCVsWrong1[i] = crps(truth=testYs, est=muAcondBWrong1, est.var=varAcondBWrong1)
-      LOOCVsWrong2[i] = crps(truth=testYs, est=muAcondBWrong2, est.var=varAcondBWrong2)
+      # LOOCVs[i] = crps(truth=testYs, est=muAcondB, est.var=varAcondB)
+      # LOOCVsWrong1[i] = crps(truth=testYs, est=muAcondBWrong1, est.var=varAcondBWrong1)
+      # LOOCVsWrong2[i] = crps(truth=testYs, est=muAcondBWrong2, est.var=varAcondBWrong2)
+      LOOCVs[i] = intervalScore(truth=testYs, est=muAcondB, var=varAcondB)
+      LOOCVsWrong1[i] = intervalScore(truth=testYs, est=muAcondBWrong1, var=varAcondBWrong1)
+      LOOCVsWrong2[i] = intervalScore(truth=testYs, est=muAcondBWrong2, var=varAcondBWrong2)
     }
     LOOCV = mean(LOOCVs)
     LOOCVWrong1 = mean(LOOCVsWrong1)
@@ -729,9 +738,13 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
   # trueMSE = mean((truth - muAcondB)^2) + sigmaEpsSq1
   # wrongMSE = mean((truth - muAcondBwrong)^2) + sigmaEpsSq1 # add sigmaEpsSq1, the true error variance, not sigmaEpsSq2
   
-  trueMSE = expectedCRPS(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondB, est.var=varAcondB + sigmaEpsSqTrueLoc)
-  wrongMSE1 = expectedCRPS(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong1, est.var=varAcondBWrong1 + sigmaEpsSqWrong1Loc)
-  wrongMSE2 = expectedCRPS(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong2, est.var=varAcondBWrong2 + sigmaEpsSqWrong2Loc)
+  trueMSE = expectedIntervalScore(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondB, est.var=varAcondB + sigmaEpsSqTrueLoc)
+  wrongMSE1 = expectedIntervalScore(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong1, est.var=varAcondBWrong1 + sigmaEpsSqWrong1Loc)
+  wrongMSE2 = expectedIntervalScore(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong2, est.var=varAcondBWrong2 + sigmaEpsSqWrong2Loc)
+  
+  # trueCRPS = expectedCRPS(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondB, est.var=varAcondB + sigmaEpsSqTrueLoc)
+  # wrongCRPS1 = expectedCRPS(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong1, est.var=varAcondBWrong1 + sigmaEpsSqWrong1Loc)
+  # wrongCRPS2 = expectedCRPS(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong2, est.var=varAcondBWrong2 + sigmaEpsSqWrong2Loc)
   
   if(FALSE) {
     # out = estPredMSErange(sigma=1, cov.args=rGRFargsTruth$cov.args, doPlot=TRUE, 
@@ -1123,6 +1136,7 @@ getTransitionErrVar = function(propMount=.3,
   
   score = match.arg(score)
   
+  browser()
   startTime = proc.time()[3]
   for(i in 1:length(oversampleMountRatioSeq)) {
     print(paste0("i=", i, "/", length(oversampleMountRatioSeq)))
@@ -1311,8 +1325,8 @@ getTransitionErrVar = function(propMount=.3,
     correctModelIndexMat = matrix(meanEffDist, nrow=length(sigmaSqsNM), ncol=length(sigmaSqsM))
     contour(log10(sigmaSqsNM), log10(sigmaSqsM), correctModelIndexMat, col=rgb(.4,.4,.4), 
             add=TRUE)
-    axis(1, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-.75)
-    axis(2, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-1.5)
+    axis(1, at=seq(-4, 0, by=2), labels=c(".01^2", ".1^2", "1"), line=-.75)
+    axis(2, at=seq(-4, 0, by=2), labels=c(".01^2", ".1^2", "1"), line=-1.5)
     mtext(TeX("$\\sigma_{epsilon,Mount}^2"), side=2, line=-.1)
     mtext(TeX("$\\sigma_{epsilon,Plains}^2"), side=1, line=1.3)
     points(log10(c(sigmaSqBestDat, .01)), log10(c(sigmaSqBestDat, 1)), pch=19, col=c("purple", "green"))
@@ -1346,6 +1360,29 @@ getTransitionErrVar = function(propMount=.3,
     #            main="Correct model selected", legend.mar=0)
     dev.off()
     
+    if(oversampleMountRatio == "0.2") {
+      browser()
+      pdf(paste0("figures/nonstatErrorIllustration/dist_simsScore", score, "_oversampM", oversampleMountRatio, ".pdf"), width=5.1, height=5)
+      par(mar=c(2.8, 1.3, 2, 1), oma=c(0, 0, 0, 1.5), mgp=c(1.9,.7,0))
+      plot(log10(fullMat[,1]), log10(fullMat[,2]), type="n", axes=FALSE, xlab="", ylab="",
+           main=TeX(paste0("LOO pref to right model ($R_{oversamp}=", oversampleMountRatio, "$)")), asp=1)
+      myQuiltPlot(log10(fullMat[,1]), log10(fullMat[,2]), fullMat[,3], col=cols,
+                  add=TRUE, nx=500, ny=500, legend.mar=1.8)
+      correctBiasIndexMat = matrix(meanDist, nrow=length(sigmaSqsNM), ncol=length(sigmaSqsM))
+      contour(log10(sigmaSqsNM), log10(sigmaSqsM), correctBiasIndexMat, col=rgb(.4,.4,.4), 
+              add=TRUE)
+      axis(1, at=seq(-4, 0, by=2), labels=c(".01^2", ".1^2", "1"), line=-.75)
+      axis(2, at=seq(-4, 0, by=2), labels=c(".01^2", ".1^2", "1"), line=-1.5)
+      mtext(TeX("$\\sigma_{epsilon,Mount}^2"), side=2, line=-.1)
+      mtext(TeX("$\\sigma_{epsilon,Plains}^2"), side=1, line=1.3)
+      points(log10(c(sigmaSqBestDat, .01)), log10(c(sigmaSqBestDat, 1)), pch=19, col=c("purple", "green"))
+      # myQuiltPlot(fullMat[,1], fullMat[,2], fullMat[,3], col=cols, 
+      #            nx=500, ny=500, log="xy", asp=1, addColorBar=TRUE, 
+      #            xlab=TeX("$\\sigma_{epsilon,Plains}^2"), ylab=TeX("$\\sigma_{epsilon,Mount}^2"), 
+      #            main="Correct model selected", legend.mar=0)
+      dev.off()
+    }
+    
     # calculate mean effective distance and mean distance from wrong model for IW
     # noting that they are the same for IW
     meanEffDist = abs(scoreDiffDom)
@@ -1367,14 +1404,14 @@ getTransitionErrVar = function(propMount=.3,
     contour(log10(sigmaSqsNM), log10(sigmaSqsM), correctModelIndexMat, col=rgb(.4,.4,.4), 
             add=TRUE, zlim=c(0, max(correctModelIndexMat)), 
             levels=seq(0, max(correctModelIndexMat), by=.2))
-    # add 0 contour by hand since contour doesn't want to plot it...
-    minI = apply(correctModelIndexMat, 1, which.min)
-    toPlotI = c(which(minI < length(sigmaSqsM)), match(TRUE, minI == length(sigmaSqsM)))
-    minI = minI[toPlotI]
-    sigmaSqsMs0 = sigmaSqsM[minI]
-    lines(log10(sigmaSqsNM[toPlotI]), log10(sigmaSqsMs0), col=rgb(.4,.4,.4))
-    axis(1, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-.75)
-    axis(2, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-1.5)
+    # # add 0 contour by hand since contour doesn't want to plot it...
+    # minI = apply(correctModelIndexMat, 1, which.min)
+    # toPlotI = c(which(minI < length(sigmaSqsM)), match(TRUE, minI == length(sigmaSqsM)))
+    # minI = minI[toPlotI]
+    # sigmaSqsMs0 = sigmaSqsM[minI]
+    # lines(log10(sigmaSqsNM[toPlotI]), log10(sigmaSqsMs0), col=rgb(.4,.4,.4))
+    axis(1, at=seq(-4, 0, by=2), labels=c(".01^2", ".1^2", "1"), line=-.75)
+    axis(2, at=seq(-4, 0, by=2), labels=c(".01^2", ".1^2", "1"), line=-1.5)
     mtext(TeX("$\\sigma_{epsilon,Mount}^2"), side=2, line=-.1)
     mtext(TeX("$\\sigma_{epsilon,Plains}^2"), side=1, line=1.3)
     points(log10(c(sigmaSqBestDat, .01)), log10(c(sigmaSqBestDat, 1)), pch=19, col=c("purple", "green"))
@@ -1417,8 +1454,8 @@ getTransitionErrVar = function(propMount=.3,
       selProbMat = matrix(selProbsLOO, nrow=length(sigmaSqsNM), ncol=length(sigmaSqsM))
       contour(log10(sigmaSqsNM), log10(sigmaSqsM), selProbMat, col=rgb(.4,.4,.4), 
               levels=seq(.2, .8, by=.2), add=TRUE)
-      axis(1, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-.75)
-      axis(2, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-1.5)
+      axis(1, at=seq(-4, 0, by=2), labels=c(".01^2", ".1^2", "1"), line=-.75)
+      axis(2, at=seq(-4, 0, by=2), labels=c(".01^2", ".1^2", "1"), line=-1.5)
       mtext(TeX("$\\sigma_{epsilon,Mount}^2"), side=2, line=-.1)
       mtext(TeX("$\\sigma_{epsilon,Plains}^2"), side=1, line=1.3)
       points(log10(c(sigmaSqBestDat, .01)), log10(c(sigmaSqBestDat, 1)), pch=19, col=c("purple", "green"))
@@ -1438,8 +1475,8 @@ getTransitionErrVar = function(propMount=.3,
       selProbMat = matrix(selProbsIW, nrow=length(sigmaSqsNM), ncol=length(sigmaSqsM))
       contour(log10(sigmaSqsNM), log10(sigmaSqsM), selProbMat, col=rgb(.4,.4,.4), 
               levels=seq(.2, .8, by=.2), add=TRUE)
-      axis(1, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-.75)
-      axis(2, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-1.5)
+      axis(1, at=seq(-4, 0, by=2), labels=c(".01^2", ".1^2", "1"), line=-.75)
+      axis(2, at=seq(-4, 0, by=2), labels=c(".01^2", ".1^2", "1"), line=-1.5)
       mtext(TeX("$\\sigma_{epsilon,Mount}^2"), side=2, line=-.1)
       mtext(TeX("$\\sigma_{epsilon,Plains}^2"), side=1, line=1.3)
       points(log10(c(sigmaSqBestDat, .01)), log10(c(sigmaSqBestDat, 1)), pch=19, col=c("purple", "green"))
@@ -1461,8 +1498,8 @@ getTransitionErrVar = function(propMount=.3,
         selProbMat = matrix(selProbsIW-selProbsLOO, nrow=length(sigmaSqsNM), ncol=length(sigmaSqsM))
         contour(log10(sigmaSqsNM), log10(sigmaSqsM), selProbMat, col=rgb(.4,.4,.4), 
                 levels=seq(-.8, .8, by=.2), add=TRUE)
-        axis(1, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-.75)
-        axis(2, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-1.5)
+        axis(1, at=seq(-4, 0, by=2), labels=c(".01^2", ".1^2", "1"), line=-.75)
+        axis(2, at=seq(-4, 0, by=2), labels=c(".01^2", ".1^2", "1"), line=-1.5)
         mtext(TeX("$\\sigma_{epsilon,Mount}^2"), side=2, line=-.1)
         mtext(TeX("$\\sigma_{epsilon,Plains}^2"), side=1, line=1.3)
         points(log10(c(sigmaSqBestDat, .01)), log10(c(sigmaSqBestDat, 1)), pch=19, col=c("purple", "green"))
@@ -1485,8 +1522,8 @@ getTransitionErrVar = function(propMount=.3,
       myQuiltPlot(log10(fullMat[,1]), log10(fullMat[,2]), selectScoreLOO, col=cols,
                   add=TRUE, nx=500, ny=500, legend.mar=1.8)
       contour(log10(sigmaSqsNM), log10(sigmaSqsM), selectScoreLOO, col=rgb(.4,.4,.4), add=TRUE)
-      axis(1, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-.75)
-      axis(2, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-1.5)
+      axis(1, at=seq(-4, 0, by=2), labels=c(".01^2", ".1^2", "1"), line=-.75)
+      axis(2, at=seq(-4, 0, by=2), labels=c(".01^2", ".1^2", "1"), line=-1.5)
       mtext(TeX("$\\sigma_{epsilon,Mount}^2"), side=2, line=-.1)
       mtext(TeX("$\\sigma_{epsilon,Plains}^2"), side=1, line=1.3)
       points(log10(c(sigmaSqBestDat, .01)), log10(c(sigmaSqBestDat, 1)), pch=19, col=c("purple", "green"))
@@ -1507,8 +1544,8 @@ getTransitionErrVar = function(propMount=.3,
       myQuiltPlot(log10(fullMat[,1]), log10(fullMat[,2]), selectScoreIW, col=cols,
                   add=TRUE, nx=500, ny=500, legend.mar=1.8)
       contour(log10(sigmaSqsNM), log10(sigmaSqsM), selectScoreIW, col=rgb(.4,.4,.4), add=TRUE)
-      axis(1, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-.75)
-      axis(2, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-1.5)
+      axis(1, at=seq(-4, 0, by=2), labels=c(".01^2", ".1^2", "1"), line=-.75)
+      axis(2, at=seq(-4, 0, by=2), labels=c(".01^2", ".1^2", "1"), line=-1.5)
       mtext(TeX("$\\sigma_{epsilon,Mount}^2"), side=2, line=-.1)
       mtext(TeX("$\\sigma_{epsilon,Plains}^2"), side=1, line=1.3)
       points(log10(c(sigmaSqBestDat, .01)), log10(c(sigmaSqBestDat, 1)), pch=19, col=c("purple", "green"))
@@ -1528,8 +1565,8 @@ getTransitionErrVar = function(propMount=.3,
         myQuiltPlot(log10(fullMat[,1]), log10(fullMat[,2]), selectScoreDiff, col=cols,
                     add=TRUE, nx=500, ny=500, legend.mar=1.8)
         contour(log10(sigmaSqsNM), log10(sigmaSqsM), selectScoreDiff, col=rgb(.4,.4,.4), add=TRUE)
-        axis(1, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-.75)
-        axis(2, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-1.5)
+        axis(1, at=seq(-4, 0, by=2), labels=c(".01^2", ".1^2", "1"), line=-.75)
+        axis(2, at=seq(-4, 0, by=2), labels=c(".01^2", ".1^2", "1"), line=-1.5)
         mtext(TeX("$\\sigma_{epsilon,Mount}^2"), side=2, line=-.1)
         mtext(TeX("$\\sigma_{epsilon,Plains}^2"), side=1, line=1.3)
         points(log10(c(sigmaSqBestDat, .01)), log10(c(sigmaSqBestDat, 1)), pch=19, col=c("purple", "green"))
@@ -1541,7 +1578,7 @@ getTransitionErrVar = function(propMount=.3,
       }
       
       thisCurrTime = proc.time()[3]
-      estT = estTimeLeft(thisStartTime, thisCurrTime, i, length(ns))
+      estT = estTimeLeft(thisStartTime, thisCurrTime, j, length(ns))
       print(paste0("iter j=", j, "/", length(ns), ", est minutes left: ", round(estT/60, 1)))
     }
     
