@@ -18,8 +18,8 @@
 #   13. Combine and save all results
 # Note that the below function is a single iteration of the for loop 
 # for easy parallelization.
-griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL, 
-                                          propMount=.3, oversampleMountRatio=1/5, 
+griddedResTestIterSmoothNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL, 
+                                          propMount=.3, rhoLam=1/5, 
                                           n1=50, gridNs=2^(1:6), Ks=c(9, 25), iter=1, 
                                           rGRFargsWrong1=NULL, rGRFargsWrong2=NULL, 
                                           nx=100, ny=100, sigmaEpsSqNonMount=.1^2, sigmaEpsSqMount=1^2, 
@@ -35,7 +35,7 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
     print(paste0("iteration ", iter, "/", length(allSeeds)))
   }
   
-  tmp = oversampleMountRatio * propMount/(1-propMount)
+  tmp = rhoLam * propMount/(1-propMount)
   # propSamplesMount = propMount * propSamplesMountRatio
   propSamplesMount = tmp/(1+tmp)
   
@@ -107,11 +107,11 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
   gridResY = 1/ny
   sampleIMount = sample((1:nrow(locs))[isMount], nMount, prob=sampleProbsMount, replace=TRUE)
   xsMount = locs[sampleIMount,] + cbind(runif(nMount, max=gridResX)-gridResX/2, 
-                                runif(nMount, max=gridResY)-gridResY/2)
+                                        runif(nMount, max=gridResY)-gridResY/2)
   ysMount = truth[sampleIMount] + rnorm(nMount, sd=sqrt(sigmaEpsSqMount))
   sampleINonMount = sample((1:nrow(locs))[!isMount], nNonMount, prob=sampleProbsNonMount, replace=TRUE)
   xsNonMount = locs[sampleINonMount,] + cbind(runif(nNonMount, max=gridResX)-gridResX/2, 
-                                        runif(nNonMount, max=gridResY)-gridResY/2)
+                                              runif(nNonMount, max=gridResY)-gridResY/2)
   ysNonMount = truth[sampleINonMount] + rnorm(nNonMount, sd=sqrt(sigmaEpsSqNonMount))
   
   xs = rbind(xsMount, xsNonMount)
@@ -150,7 +150,7 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
   SigmaSample = stationary.cov(xs, xs, Covariance="Matern", aRange=rGRFargsTruth$cov.args$range, 
                                smoothness=rGRFargsTruth$cov.args$smoothness, distMat=distMatXs) * rGRFargsTruth$sigma^2
   SigmaSampleWrong1 = stationary.cov(xs, xs, Covariance="Matern", aRange=rGRFargsWrong1$cov.args$range, 
-                                    smoothness=rGRFargsWrong1$cov.args$smoothness, distMat=distMatXs) * rGRFargsWrong1$sigma^2
+                                     smoothness=rGRFargsWrong1$cov.args$smoothness, distMat=distMatXs) * rGRFargsWrong1$sigma^2
   SigmaSampleWrong2 = stationary.cov(xs, xs, Covariance="Matern", aRange=rGRFargsWrong2$cov.args$range, 
                                      smoothness=rGRFargsWrong2$cov.args$smoothness, distMat=distMatXs) * rGRFargsWrong2$sigma^2
   SigmaSample = SigmaSample + diag(sigmaEpsSqTrue)
@@ -161,7 +161,7 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
   SigmaGridToSample = stationary.cov(locs, xs, Covariance="Matern", aRange=rGRFargsTruth$cov.args$range, 
                                      smoothness=rGRFargsTruth$cov.args$smoothness, distMat=distLocsToSample) * rGRFargsTruth$sigma^2
   SigmaGridToSampleWrong1 = stationary.cov(locs, xs, Covariance="Matern", aRange=rGRFargsWrong1$cov.args$range, 
-                                          smoothness=rGRFargsWrong1$cov.args$smoothness, distMat=distLocsToSample) * rGRFargsWrong1$sigma^2
+                                           smoothness=rGRFargsWrong1$cov.args$smoothness, distMat=distLocsToSample) * rGRFargsWrong1$sigma^2
   SigmaGridToSampleWrong2 = stationary.cov(locs, xs, Covariance="Matern", aRange=rGRFargsWrong2$cov.args$range, 
                                            smoothness=rGRFargsWrong2$cov.args$smoothness, distMat=distLocsToSample) * rGRFargsWrong2$sigma^2
   
@@ -236,7 +236,7 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
         varAcondB = condDistn$varAcondB
         
         condDistnWrong1 = condMeanMVN(SigmaAA=SigmaAAWrong1, SigmaAB=SigmaABWrong1, SigmaBB=SigmaBBWrong1, 
-                                     ysB=trainYs, getFullCov=FALSE, getCondVar=TRUE)
+                                      ysB=trainYs, getFullCov=FALSE, getCondVar=TRUE)
         muAcondBWrong1 = condDistnWrong1$muAcondB
         varAcondBWrong1 = condDistnWrong1$varAcondB
         
@@ -814,7 +814,7 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
        sigmaEpsSqNonMountWrong1, sigmaEpsSqMountWrong1, 
        sigmaEpsSqNonMountWrong2, sigmaEpsSqMountWrong2, 
        allSeeds, trueVarW, estVarWVC, 
-       file=paste0("savedOutput/griddedCVtestNonstatErr/n1", n1, "_pMount", propMount, "_Rosamp", oversampleMountRatio, 
+       file=paste0("savedOutput/griddedCVtestNonstatErr/n1", n1, "_pMount", propMount, "_Rosamp", rhoLam, 
                    "_s2M", sigmaEpsSqMount, "_", sigmaEpsSqMountWrong1, "_", sigmaEpsSqMountWrong2, 
                    "_s2NM", sigmaEpsSqNonMount, "_", sigmaEpsSqNonMountWrong1, "_", sigmaEpsSqNonMountWrong2, 
                    "_iter", iter, ".RData"))
@@ -868,7 +868,7 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
        allSeeds=allSeeds, trueVarW=trueVarW, estVarWVC=estVarWVC)
 }
 
-getNonstatErrECRPSpropGrid = function(n=50, nsim=100, 
+getSmoothNonstatErrECRPSpropGrid = function(n=50, nsim=100, 
                                       propMountSeq=seq(0.05, .95, by=.05), propSamplesMountSeq=propMountSeq, 
                                       rGRFargsTruth=NULL, rGRFargsMount=NULL, 
                                       rGRFargsWrong1=NULL, rGRFargsWrong2=NULL, 
@@ -895,14 +895,14 @@ getNonstatErrECRPSpropGrid = function(n=50, nsim=100,
       propSamplesMount = propSamplesMountSeq[j]
       
       out = getNonstatErrECRPS(n=n, nsim=nsim, 
-                         propMount=propMount, propSamplesMount=propSamplesMount, 
-                         rGRFargsTruth=rGRFargsTruth, rGRFargsMount=rGRFargsMount, 
-                         rGRFargsWrong1=rGRFargsWrong1, rGRFargsWrong2=rGRFargsWrong2, 
-                         nx=nx, ny=ny, 
-                         sigmaEpsSqNonMount=sigmaEpsSqNonMount, sigmaEpsSqMount=sigmaEpsSqMount, 
-                         sigmaEpsSqNonMountWrong1=sigmaEpsSqNonMountWrong1,sigmaEpsSqMountWrong1=sigmaEpsSqMountWrong1, 
-                         sigmaEpsSqNonMountWrong2=sigmaEpsSqNonMountWrong2,sigmaEpsSqMountWrong2=sigmaEpsSqMountWrong2, 
-                         seed=NULL, printProgress=FALSE)
+                               propMount=propMount, propSamplesMount=propSamplesMount, 
+                               rGRFargsTruth=rGRFargsTruth, rGRFargsMount=rGRFargsMount, 
+                               rGRFargsWrong1=rGRFargsWrong1, rGRFargsWrong2=rGRFargsWrong2, 
+                               nx=nx, ny=ny, 
+                               sigmaEpsSqNonMount=sigmaEpsSqNonMount, sigmaEpsSqMount=sigmaEpsSqMount, 
+                               sigmaEpsSqNonMountWrong1=sigmaEpsSqNonMountWrong1,sigmaEpsSqMountWrong1=sigmaEpsSqMountWrong1, 
+                               sigmaEpsSqNonMountWrong2=sigmaEpsSqNonMountWrong2,sigmaEpsSqMountWrong2=sigmaEpsSqMountWrong2, 
+                               seed=NULL, printProgress=FALSE)
       
       trueECRPSMat[i,j] = out$trueECRPS
       wrongECRPS1Mat[i,j] = out$wrongECRPS1
@@ -932,7 +932,7 @@ getNonstatErrECRPSpropGrid = function(n=50, nsim=100,
 }
 
 # calculate expected CRPS for each of the models
-getNonstatErrECRPS = function(n=50, nsim=100, 
+getSmoothNonstatErrECRPS = function(n=50, nsim=100, 
                               propMount=.3, propSamplesMount=propMount/5, 
                               rGRFargsTruth=NULL, rGRFargsMount=NULL, 
                               rGRFargsWrong1=NULL, rGRFargsWrong2=NULL, 
@@ -1071,11 +1071,11 @@ getNonstatErrECRPS = function(n=50, nsim=100,
     wrongMSE2s[i] = expectedIntervalScore(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong2, est.var=varAcondBWrong2 + sigmaEpsSqWrong2Loc)
     
     trueMSEsSampleWeighted[i] = expectedIntervalScore(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondB, est.var=varAcondB + sigmaEpsSqTrueLoc, 
-                                             weights=sampleProbs)
+                                                      weights=sampleProbs)
     wrongMSE1sSampleWeighted[i] = expectedIntervalScore(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong1, est.var=varAcondBWrong1 + sigmaEpsSqWrong1Loc, 
-                                               weights=sampleProbs)
+                                                        weights=sampleProbs)
     wrongMSE2sSampleWeighted[i] = expectedIntervalScore(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong2, est.var=varAcondBWrong2 + sigmaEpsSqWrong2Loc, 
-                                               weights=sampleProbs)
+                                                        weights=sampleProbs)
     
     if(printProgress) {
       currTime = proc.time()[3]
@@ -1102,7 +1102,7 @@ getNonstatErrECRPS = function(n=50, nsim=100,
        wrongECRPS2SampleWeighted=wrongECRPS2SampleWeighted)
 }
 
-getNonstatErrECRPSpropGrid = function(n=50, nsim=100, 
+getSmoothNonstatErrECRPSpropGrid = function(n=50, nsim=100, 
                                       propMountSeq=seq(0.05, .95, by=.05), propSamplesMountSeq=propMountSeq, 
                                       rGRFargsTruth=NULL, rGRFargsMount=NULL, 
                                       rGRFargsWrong1=NULL, rGRFargsWrong2=NULL, 
@@ -1115,438 +1115,155 @@ getNonstatErrECRPSpropGrid = function(n=50, nsim=100,
   
 }
 
-getTransitionErrVar = function(propMount=.3, 
-                               oversampleMountRatioSeq=c(1/10, 1/5, 1/2, 1, 2, 5, 10), 
-                               sigmaEpsSqNonMount=.1^2, sigmaEpsSqMount=1^2, 
-                               score=c("is", "crps"), ns=c(50, 500, 10000), 
-                               regenResults=TRUE, saveResults=NULL) {
+getSmoothTransitionErrVar = function(rhoLamSeq=c(-.8, -.4, 0, .4, .8), 
+                               alphaLam=0, betaLam=1, 
+                               rhoEps=1, alphaEps=0, betaEps=1, 
+                               score=c("is", "crps"), nIntPts=10, 
+                               regenResults=TRUE) {
   
   score = match.arg(score)
   
   startTime = proc.time()[3]
-  for(i in 1:length(oversampleMountRatioSeq)) {
-    print(paste0("i=", i, "/", length(oversampleMountRatioSeq)))
-    oversampleMountRatio = oversampleMountRatioSeq[i]
-    tmp = oversampleMountRatio * propMount/(1-propMount)
-    # propSamplesMount = propMount * propSamplesMountRatio
-    propSamplesMount = tmp/(1+tmp)
+  for(i in 1:length(rhoLamSeq)) {
+    print(paste0("i=", i, "/", length(rhoLamSeq)))
+    rhoLam = rhoLamSeq[i]
     
     # get the scoring rule requested
     if(score == "crps") {
       scoreName = "CRPS"
-      scoreFunDom = function(sigmaEpsSqNonMountWrong, sigmaEpsSqMountWrong=sigmaEpsSqNonMountWrong) {
-        expectedCRPS(0, truth.var = sigmaEpsSqMount, est = 0, est.var = sigmaEpsSqMountWrong, getAverage = FALSE)*propMount + expectedCRPS(0, truth.var = sigmaEpsSqNonMount, est = 0, est.var = sigmaEpsSqNonMountWrong, getAverage = FALSE)*(1-propMount)
-      }
-      scoreFunDat = function(sigmaEpsSqNonMountWrong, sigmaEpsSqMountWrong=sigmaEpsSqNonMountWrong) {
-        expectedCRPS(0, truth.var = sigmaEpsSqMount, est = 0, est.var = sigmaEpsSqMountWrong, getAverage = FALSE)*propSamplesMount + expectedCRPS(0, truth.var = sigmaEpsSqNonMount, est = 0, est.var = sigmaEpsSqNonMountWrong, getAverage = FALSE)*(1-propSamplesMount)
-      }
-      scoreVarDeltaM = function(sigmaEpsSqMountWrong1, sigmaEpsSqMountWrong2=sigmaEpsSqMountWrong1) {
-        stop("not yet implemented")
-      }
-      scoreVarDeltaP = function(sigmaEpsSqNonMountWrong1, sigmaEpsSqNonMountWrong2=sigmaEpsSqNonMountWrong1) {
-        stop("not yet implemented")
-      }
+      stop("not yet implemented")
     } else {
       scoreName = "IS"
-      scoreFunDom = function(sigmaEpsSqNonMountWrong, sigmaEpsSqMountWrong=sigmaEpsSqNonMountWrong) {
-        expectedIntervalScore(0, truth.var = sigmaEpsSqMount, est = 0, est.var = sigmaEpsSqMountWrong, getAverage = FALSE)*propMount + expectedIntervalScore(0, truth.var = sigmaEpsSqNonMount, est = 0, est.var = sigmaEpsSqNonMountWrong, getAverage = FALSE)*(1-propMount)
+      scoreFunDom = function(alphaEps1, betaEps1=0) {
+        expectedIntervalScoreSmooth(rhoLam=rhoLam, alphaLam=alphaLam, betaLam=0, 
+                                    rhoEps=rhoEps, alphaEps=alphaEps, betaEps=betaEps, 
+                                    alphaEps1=alphaEps1, betaEps1=betaEps1, 
+                                    getAverage = FALSE)
       }
-      scoreFunDat = function(sigmaEpsSqNonMountWrong, sigmaEpsSqMountWrong=sigmaEpsSqNonMountWrong) {
-        expectedIntervalScore(0, truth.var = sigmaEpsSqMount, est = 0, est.var = sigmaEpsSqMountWrong, getAverage = FALSE)*propSamplesMount + expectedIntervalScore(0, truth.var = sigmaEpsSqNonMount, est = 0, est.var = sigmaEpsSqNonMountWrong, getAverage = FALSE)*(1-propSamplesMount)
+      scoreFunDat = function(alphaEps1, betaEps1=0) {
+        expectedIntervalScoreSmooth(rhoLam=rhoLam, alphaLam=alphaLam, betaLam=betaLam, 
+                                    rhoEps=rhoEps, alphaEps=alphaEps, betaEps=betaEps, 
+                                    alphaEps1=alphaEps1, betaEps1=betaEps1, 
+                                    getAverage = FALSE)
       }
-      scoreVarDeltaM = function(sigmaEpsSqMountWrong1, sigmaEpsSqMountWrong2=sigmaEpsSqMountWrong1) {
-        sigma1SqM = varIntervalScore(0, truth.var = sigmaEpsSqMount, est = 0, est.var = sigmaEpsSqMountWrong1, getAverage = FALSE)
-        sigma2SqM = varIntervalScore(0, truth.var = sigmaEpsSqMount, est = 0, est.var = sigmaEpsSqMountWrong2, getAverage = FALSE)
-        rho12M = covIntervalScore(0, truth.var = sigmaEpsSqMount, est1 = 0, est.var1 = sigmaEpsSqMountWrong1, 
-                                  est2 = 0, est.var2 = sigmaEpsSqMountWrong2, getAverage = FALSE)
-        (1/propSamplesMount) * (sigma1SqM + sigma2SqM - 2*rho12M)
-      }
-      scoreVarDeltaP = function(sigmaEpsSqNonMountWrong1, sigmaEpsSqNonMountWrong2=sigmaEpsSqNonMountWrong1) {
-        sigma1SqP = varIntervalScore(0, truth.var = sigmaEpsSqNonMount, est = 0, est.var = sigmaEpsSqNonMountWrong1, getAverage = FALSE)
-        sigma2SqP = varIntervalScore(0, truth.var = sigmaEpsSqNonMount, est = 0, est.var = sigmaEpsSqNonMountWrong2, getAverage = FALSE)
-        rho12P = covIntervalScore(0, truth.var = sigmaEpsSqNonMount, est1 = 0, est.var1 = sigmaEpsSqNonMountWrong1, 
-                                  est2 = 0, est.var2 = sigmaEpsSqNonMountWrong2, getAverage = FALSE)
-        (1/(1-propSamplesMount)) * (sigma1SqP + sigma2SqP - 2*rho12P)
-      }
-    }
-    
-    correctSelProb = function(n, sigmaEpsSqNonMountWrong1, sigmaEpsSqMountWrong1=sigmaEpsSqNonMountWrong1, 
-                              sigmaEpsSqNonMountWrong2, sigmaEpsSqMountWrong2=sigmaEpsSqNonMountWrong2) {
-      # calculate MVN mean, variance of joint distribution between LOO score diff and IW score diff
-      mu1M = expectedIntervalScore(0, truth.var = sigmaEpsSqMount, est = 0, est.var = sigmaEpsSqMountWrong1, getAverage = FALSE)
-      mu2M = expectedIntervalScore(0, truth.var = sigmaEpsSqMount, est = 0, est.var = sigmaEpsSqMountWrong2, getAverage = FALSE)
-      mu1P = expectedIntervalScore(0, truth.var = sigmaEpsSqNonMount, est = 0, est.var = sigmaEpsSqNonMountWrong1, getAverage = FALSE)
-      mu2P = expectedIntervalScore(0, truth.var = sigmaEpsSqNonMount, est = 0, est.var = sigmaEpsSqNonMountWrong2, getAverage = FALSE)
-      muM = mu1M - mu2M
-      muP = mu1P - mu2P
-      sigmaSqM = scoreVarDeltaM(sigmaEpsSqMountWrong1, sigmaEpsSqMountWrong2)
-      sigmaSqP = scoreVarDeltaP(sigmaEpsSqNonMountWrong1, sigmaEpsSqNonMountWrong2)
-      
-      # first find which model is better
-      model1Better = (propMount * muM + (1-propMount) * muP) < 0
-      
-      # now get probability LOOCV determines the correct model
-      meanLOO = (propSamplesMount * muM + (1-propSamplesMount) * muP)
-      sigmaSqLOO = (propSamplesMount^2 * sigmaSqM + (1-propSamplesMount)^2 * sigmaSqP)*(1/n)
-      selProbsLOO = numeric(length(meanLOO))
-      selProbsLOO = pnorm(0, mean=meanLOO, sd=sqrt(sigmaSqLOO))
-      selProbsLOO[!model1Better] = 1-selProbsLOO[!model1Better]
-      
-      # get the same for IWCV
-      meanIW = (propMount * muM + (1-propMount) * muP)
-      sigmaSqIW = (propMount^2 * sigmaSqM + (1-propMount)^2 * sigmaSqP)*(1/n)
-      selProbsIW = numeric(length(meanIW))
-      selProbsIW = pnorm(0, mean=meanIW, sd=sqrt(sigmaSqIW))
-      selProbsIW[!model1Better] = 1-selProbsIW[!model1Better]
-      
-      # A = rbind(c(propMount, 1-propMount),
-      #           c(propSamplesMount, 1-propSamplesMount))
-      # 
-      # startTime = proc.time()[3]
-      # thisProb = function(i) {
-      #   thisSigmaSqM = sigmaSqM[i]
-      #   thisSigmaSqP = sigmaSqP[i]
-      #   thisMuM = muM[i]
-      #   thisMuP = muP[i]
-      # 
-      #   D = (1/n) * diag(c(thisSigmaSqM, thisSigmaSqP))
-      #   Sigma = A %*% D %*% t(A)
-      #   mu = A %*% c(thisMuM, thisMuP)
-      # 
-      #   pneg = pmvnorm(lower=-Inf,
-      #                  upper=c(0, 0),
-      #                  mean=c(mu),
-      #                  sigma=Sigma)[1]
-      #   ppos = pmvnorm(lower=0,
-      #                  upper=Inf,
-      #                  mean=c(mu),
-      #                  sigma=Sigma)[1]
-      # 
-      #   tenthN = floor(length(sigmaSqM)/10)
-      #   if(((i %% tenthN) == 0) || i == 1000) {
-      #     currTime = proc.time()[3]
-      #     tLeft = estTimeLeft(startTime, currTime, i, length(sigmaSqM))
-      #     print(paste0("iter ", i, "/", length(sigmaSqM), ", est time left: ", tLeft/60, " minutes"))
-      #   }
-      #   
-      #   pneg + ppos
-      # }
-      # 
-      # selProbs = sapply(1:length(mu1M), thisProb)
-      # selProbs
-      
-      cbind(selProbLOO=selProbsLOO, selProbIW=selProbsIW)
     }
     
     # calculate the best stationary error var according to the data
-    sigmaSqTest = seq(sigmaEpsSqNonMount, sigmaEpsSqMount, l=100)
-    statDatScores = scoreFunDat(sigmaSqTest)
-    bestI = which.min(statDatScores)
-    sigmaSqBestDat = sigmaSqTest[bestI]
-    scoreBestDat = statDatScores[bestI]
-    
-    out = optimize(scoreFunDat, lower=0, upper=1)
-    sigmaSqBestDat = out$minimum
+    out = optimize(scoreFunDat, betaEps1=0, lower=0, upper=2)
+    alphaEpsBestDat = out$minimum
     scoreBestDat = out$objective
     
     # calculate the best stationary error var on the domain
-    statDomScores = scoreFunDom(sigmaSqTest)
-    bestI = which.min(statDomScores)
-    sigmaSqBestDom = sigmaSqTest[bestI]
-    scoreBestDom = statDomScores[bestI]
-    
-    out = optimize(scoreFunDom, lower=0, upper=1)
-    sigmaSqBestDom = out$minimum
+    out = optimize(scoreFunDom, betaEps1=0, lower=0, upper=2)
+    alphaEpsBestDom = out$minimum
     scoreBestDom = out$objective
     
-    # Calculate expected scores under the data
-    sigmaSqsNM = seq(sigmaSqBestDom, sigmaEpsSqNonMount, l=100)
-    sigmaSqsM = seq(sigmaSqBestDom, sigmaEpsSqMount, l=100)
-    nonStatDatScores = scoreFunDat(sigmaSqsNM, sigmaSqsM)
+    # alphaEps1 = 10^(seq(log10(.1^2), log10(1^2), l=1000))
+    # betaEps1 = 10^(seq(log10(.1^2), log10(1^2), l=1000))
+    alphaEps1 = seq(-2, 1.5, l=700)
+    betaEps1 = seq(-1, 2.5, l=700)
+    alphaBetaMat = expand.grid(alphaEps=alphaEps1, betaEps=betaEps1)
     
-    if(FALSE) {
-      # t = seq(0, 1, l=100)
-      # plot(t, nonStatDatScores, type="l")
-      plot(sigmaSqsNM, nonStatDatScores, type="l", xlab="Plains error variance", ylab="Score")
-      abline(h=scoreBestDat, lty=2)
-    }
-    
-    # sigmaSqsNM = 10^(seq(log10(.1^2), log10(1^2), l=1000))
-    # sigmaSqsM = 10^(seq(log10(.1^2), log10(1^2), l=1000))
-    sigmaSqsNM = 10^(seq(log10(.01^2), log10(2.9^2), l=1000))
-    sigmaSqsM = 10^(seq(log10(.01^2), log10(2.9^2), l=1000))
-    
-    if(is.null(saveResults)) {
-      saveResults = length(sigmaSqsNM) > 200
-    }
-    
-    sigmaSqsMat = expand.grid(sigmaSqsNM=sigmaSqsNM, sigmaSqsM=sigmaSqsM)
     if(regenResults) {
-      nonStatDatScoresMat = scoreFunDat(sigmaSqsMat[,1], sigmaSqsMat[,2])
-      nonStatDomScoresMat = scoreFunDom(sigmaSqsMat[,1], sigmaSqsMat[,2])
-      if(saveResults) {
-        save(sigmaSqsMat, nonStatDatScoresMat, nonStatDomScoresMat, 
-             file=paste0("savedOutput/griddedCVtestNonstatErr/nonStatScoresMat_oversampM", 
-                         oversampleMountRatio, ".RData"))
-      }
+      nonStatDatScoresMat = scoreFunDat(alphaBetaMat[,1], alphaBetaMat[,2])
+      nonStatDomScoresMat = scoreFunDom(alphaBetaMat[,1], alphaBetaMat[,2])
+      save(nonStatDatScoresMat, nonStatDomScoresMat, file=paste0("savedOutput/smoothNonstartErr/nonStatScoresMats_rhoLam", rhoLam, ".RData"))
     } else {
-      out = load(paste0("savedOutput/griddedCVtestNonstatErr/nonStatScoresMat_oversampM", 
-                        oversampleMountRatio, ".RData"))
+      out = load(paste0("savedOutput/smoothNonstartErr/nonStatScoresMats_rhoLam", rhoLam, ".RData"))
     }
     
     scoreDiffDat = nonStatDatScoresMat - scoreBestDat
-    scoreDiffDom = nonStatDomScoresMat - scoreFunDom(sigmaSqBestDat)
+    scoreDiffDom = nonStatDomScoresMat - scoreFunDom(alphaEpsBestDat)
     
     # calculate mean effective distance and mean distance from wrong model for LOO
     meanEffDist = sign(scoreDiffDat) * sign(scoreDiffDom) * apply(abs(cbind(scoreDiffDat, scoreDiffDom)), 1, min)
-    fullMat = cbind(sigmaSqsMat, meanEffDist)
+    fullMat = cbind(alphaBetaMat, meanEffDist)
     cols = makeRedBlueDivergingColors(64, valRange=range(fullMat[,3]), center=0)
     
-    pdf(paste0("figures/nonstatErrorIllustration/effDist_Score", score, "_oversampM", oversampleMountRatio, ".pdf"), width=5.1, height=5)
+    pdf(paste0("figures/smoothNonstatErrorIllustration/effDist_Score", score, "_rhoLam", rhoLam, ".pdf"), width=5.1, height=5)
     par(mar=c(2.8, 1.3, 2, 1), oma=c(0, 0, 0, 1.5), mgp=c(1.9,.7,0))
-    plot(log10(fullMat[,1]), log10(fullMat[,2]), type="n", axes=FALSE, xlab="", ylab="",
-         main=TeX(paste0("LOO eff. pref to right model ($R_{oversamp}=", oversampleMountRatio, "$)")), asp=1)
-    myQuiltPlot(log10(fullMat[,1]), log10(fullMat[,2]), fullMat[,3], col=cols,
-                add=TRUE, nx=500, ny=500, legend.mar=1.8)
-    correctModelIndexMat = matrix(meanEffDist, nrow=length(sigmaSqsNM), ncol=length(sigmaSqsM))
-    contour(log10(sigmaSqsNM), log10(sigmaSqsM), correctModelIndexMat, col=rgb(.4,.4,.4), 
+    plot(fullMat[,1], fullMat[,2], type="n", axes=FALSE, xlab="", ylab="",
+         main=TeX(paste0("LOO eff. pref to right model ($\\rho_{\\lambda}=", rhoLam, "$)")), asp=1)
+    myQuiltPlot(fullMat[,1], fullMat[,2], fullMat[,3], col=cols,
+                add=TRUE, nx=90, ny=80, legend.mar=1.8)
+    correctModelIndexMat = matrix(meanEffDist, nrow=length(alphaEps1), ncol=length(betaEps1))
+    contour(alphaEps1, betaEps1, correctModelIndexMat, col=rgb(.4,.4,.4), 
             add=TRUE)
     axis(1, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-.75)
     axis(2, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-1.5)
-    mtext(TeX("$\\sigma_{epsilon,Mount}^2"), side=2, line=-.1)
-    mtext(TeX("$\\sigma_{epsilon,Plains}^2"), side=1, line=1.3)
-    points(log10(c(sigmaSqBestDat, .01)), log10(c(sigmaSqBestDat, 1)), pch=19, col=c("purple", "green"))
+    mtext(TeX("$\\alpha_{\\epsilon}$"), side=2, line=-.1)
+    mtext(TeX("$\\beta_{\\epsilon}"), side=1, line=1.3)
+    points(c(alphaEpsBestDat, 0), c(0, 1), pch=19, col=c("purple", "green"))
     # myQuiltPlot(fullMat[,1], fullMat[,2], fullMat[,3], col=cols, 
-    #            nx=500, ny=500, log="xy", asp=1, addColorBar=TRUE, 
-    #            xlab=TeX("$\\sigma_{epsilon,Plains}^2"), ylab=TeX("$\\sigma_{epsilon,Mount}^2"), 
+    #            nx=80, ny=80, log="xy", asp=1, addColorBar=TRUE, 
+    #            xlab=TeX("$\\alpha_{\\epsilon}$"), ylab=TeX("$\\beta_{\\epsilon}$"), 
     #            main="Correct model selected", legend.mar=0)
     dev.off()
     
     meanDist = abs(scoreDiffDat) * sign(scoreDiffDat) * sign(scoreDiffDom)
-    fullMat = cbind(sigmaSqsMat, meanDist)
+    fullMat = cbind(alphaBetaMat, meanDist)
     
     cols = makeRedBlueDivergingColors(64, valRange=range(fullMat[,3]), center=0)
-    pdf(paste0("figures/nonstatErrorIllustration/dist_Score", score, "_oversampM", oversampleMountRatio, ".pdf"), width=5.1, height=5)
+    pdf(paste0("figures/smoothNonstatErrorIllustration/dist_Score", score, "_rhoLam", rhoLam, ".pdf"), width=5.1, height=5)
     par(mar=c(2.8, 1.3, 2, 1), oma=c(0, 0, 0, 1.5), mgp=c(1.9,.7,0))
-    plot(log10(fullMat[,1]), log10(fullMat[,2]), type="n", axes=FALSE, xlab="", ylab="",
-         main=TeX(paste0("LOO pref to right model ($R_{oversamp}=", oversampleMountRatio, "$)")), asp=1)
-    myQuiltPlot(log10(fullMat[,1]), log10(fullMat[,2]), fullMat[,3], col=cols,
-                add=TRUE, nx=500, ny=500, legend.mar=1.8)
-    correctBiasIndexMat = matrix(meanDist, nrow=length(sigmaSqsNM), ncol=length(sigmaSqsM))
-    contour(log10(sigmaSqsNM), log10(sigmaSqsM), correctBiasIndexMat, col=rgb(.4,.4,.4), 
+    plot(fullMat[,1], fullMat[,2], type="n", axes=FALSE, xlab="", ylab="",
+         main=TeX(paste0("LOO pref to right model ($\\rho_{\\lamda}=", rhoLam, "$)")), asp=1)
+    myQuiltPlot(fullMat[,1], fullMat[,2], fullMat[,3], col=cols,
+                add=TRUE, nx=80, ny=80, legend.mar=1.8)
+    correctBiasIndexMat = matrix(meanDist, nrow=length(alphaEps1), ncol=length(betaEps1))
+    contour(alphaEps1, betaEps1, correctBiasIndexMat, col=rgb(.4,.4,.4), 
             add=TRUE)
-    axis(1, at=seq(-4, 0, by=2), labels=c(".01^2", ".1^2", "1"), line=-.75)
-    axis(2, at=seq(-4, 0, by=2), labels=c(".01^2", ".1^2", "1"), line=-1.5)
-    mtext(TeX("$\\sigma_{epsilon,Mount}^2"), side=2, line=-.1)
-    mtext(TeX("$\\sigma_{epsilon,Plains}^2"), side=1, line=1.3)
-    points(log10(c(sigmaSqBestDat, .01)), log10(c(sigmaSqBestDat, 1)), pch=19, col=c("purple", "green"))
+    axis(1, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-.75)
+    axis(2, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-1.5)
+    mtext(TeX("$\\beta_{\\epsilon}$"), side=2, line=-.1)
+    mtext(TeX("$\\alpha_{\\epsilon}$"), side=1, line=1.3)
+    points(c(alphaEpsBestDat, 0), c(0, 1), pch=19, col=c("purple", "green"))
     # myQuiltPlot(fullMat[,1], fullMat[,2], fullMat[,3], col=cols, 
-    #            nx=500, ny=500, log="xy", asp=1, addColorBar=TRUE, 
-    #            xlab=TeX("$\\sigma_{epsilon,Plains}^2"), ylab=TeX("$\\sigma_{epsilon,Mount}^2"), 
+    #            nx=80, ny=80, log="xy", asp=1, addColorBar=TRUE, 
+    #            xlab=TeX("$\\alpha_{\\epsilon}$"), ylab=TeX("$\\beta_{\\epsilon}$"), 
     #            main="Correct model selected", legend.mar=0)
     dev.off()
     
     # calculate mean effective distance and mean distance from wrong model for IW
     # noting that they are the same for IW
     meanEffDist = abs(scoreDiffDom)
-    fullMat = cbind(sigmaSqsMat, meanEffDist)
+    fullMat = cbind(alphaBetaMat, meanEffDist)
     cols = makeRedBlueDivergingColors(64, valRange=c(0, max(fullMat[,3])), center=0)
     
-    pdf(paste0("figures/nonstatErrorIllustration/effDistIW_Score", score, "_oversampM", oversampleMountRatio, ".pdf"), width=5.1, height=5)
+    pdf(paste0("figures/smoothNonstatErrorIllustration/effDistIW_Score", score, "_rhoLam", rhoLam, ".pdf"), width=5.1, height=5)
     par(mar=c(2.8, 1.3, 2, 1), oma=c(0, 0, 0, 1.5), mgp=c(1.9,.7,0))
-    plot(log10(fullMat[,1]), log10(fullMat[,2]), type="n", axes=FALSE, xlab="", ylab="",
-         main=TeX(paste0("IW eff. pref to right model ($R_{oversamp}=", oversampleMountRatio, "$)")), asp=1)
-    myQuiltPlot(log10(fullMat[,1]), log10(fullMat[,2]), fullMat[,3], col=cols,
-                add=TRUE, nx=500, ny=500, legend.mar=1.8, zlim=c(0, max(fullMat[,3])))
-    correctModelIndexMat = matrix(meanEffDist, nrow=length(sigmaSqsNM), ncol=length(sigmaSqsM))
-    # contour(log10(sigmaSqsNM), log10(sigmaSqsM), correctModelIndexMat, col=rgb(.4,.4,.4), 
+    plot(fullMat[,1], fullMat[,2], type="n", axes=FALSE, xlab="", ylab="",
+         main=TeX(paste0("IW eff. pref. to right model ($\\rho_{\\lamda}=", rhoLam, "$)")), asp=1)
+    myQuiltPlot(fullMat[,1], fullMat[,2], fullMat[,3], col=cols,
+                add=TRUE, nx=80, ny=80, legend.mar=1.8, zlim=c(0, max(fullMat[,3])))
+    correctModelIndexMat = matrix(meanEffDist, nrow=length(alphaEps1), ncol=length(betaEps1))
+    # contour(alphaEps1, betaEps1, correctModelIndexMat, col=rgb(.4,.4,.4), 
     #         add=TRUE, zlim=c(0, max(correctModelIndexMat)), 
     #         levels=c(5e-4, seq(.2, max(correctModelIndexMat), by=.2)), 
     #         labels=c("0", as.character(seq(.2, max(correctModelIndexMat), by=.2))))
     # correctModelIndexMat[correctModelIndexMat < 1e-4] = -1e6
-    contour(log10(sigmaSqsNM), log10(sigmaSqsM), correctModelIndexMat, col=rgb(.4,.4,.4), 
+    contour(alphaEps1, betaEps1, correctModelIndexMat, col=rgb(.4,.4,.4), 
             add=TRUE, zlim=c(0, max(correctModelIndexMat)), 
             levels=seq(0, max(correctModelIndexMat), by=.2))
-    # add 0 contour by hand since contour doesn't want to plot it...
-    minI = apply(correctModelIndexMat, 1, which.min)
-    toPlotI = c(which(minI < length(sigmaSqsM)), match(TRUE, minI == length(sigmaSqsM)))
-    minI = minI[toPlotI]
-    sigmaSqsMs0 = sigmaSqsM[minI]
-    lines(log10(sigmaSqsNM[toPlotI]), log10(sigmaSqsMs0), col=rgb(.4,.4,.4))
+    # # add 0 contour by hand since contour doesn't want to plot it...
+    # minI = apply(correctModelIndexMat, 1, which.min)
+    # toPlotI = c(which(minI < length(betaEps1)), match(TRUE, minI == length(betaEps1)))
+    # minI = minI[toPlotI]
+    # betas0 = betaEps1[minI]
+    # lines(alphaEps1[toPlotI], betas0, col=rgb(.4,.4,.4))
     axis(1, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-.75)
     axis(2, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-1.5)
-    mtext(TeX("$\\sigma_{epsilon,Mount}^2"), side=2, line=-.1)
-    mtext(TeX("$\\sigma_{epsilon,Plains}^2"), side=1, line=1.3)
-    points(log10(c(sigmaSqBestDat, .01)), log10(c(sigmaSqBestDat, 1)), pch=19, col=c("purple", "green"))
+    mtext(TeX("$\\beta_{\\epsilon}$"), side=2, line=-.1)
+    mtext(TeX("$\\alpha_{\\epsilon}$"), side=1, line=1.3)
+    points(c(alphaEpsBestDat, 0), c(0, 1), pch=19, col=c("purple", "green"))
     # myQuiltPlot(fullMat[,1], fullMat[,2], fullMat[,3], col=cols, 
-    #            nx=500, ny=500, log="xy", asp=1, addColorBar=TRUE, 
-    #            xlab=TeX("$\\sigma_{epsilon,Plains}^2"), ylab=TeX("$\\sigma_{epsilon,Mount}^2"), 
+    #            nx=80, ny=80, log="xy", asp=1, addColorBar=TRUE, 
+    #            xlab=TeX("$\\alpha_{\\epsilon}$"), ylab=TeX("$\\beta_{\\epsilon}$"), 
     #            main="Correct model selected", legend.mar=0)
     dev.off()
     
-    thisStartTime = proc.time()[3]
-    for(j in 1:length(ns)) {
-      thisN = ns[j]
-      
-      # calculate asymptotic selection probabilities for this n
-      if(regenResults) {
-        selProbs = correctSelProb(thisN, sigmaEpsSqNonMountWrong1=fullMat[,1], sigmaEpsSqMountWrong1=fullMat[,2], 
-                                  sigmaEpsSqNonMountWrong2=sigmaSqBestDat, sigmaEpsSqMountWrong2=sigmaSqBestDat)
-        selProbsLOO = selProbs[,1]
-        selProbsIW = selProbs[,2]
-        
-        if(saveResults) {
-          save(selProbsLOO, selProbsIW, 
-               file=paste0("savedOutput/griddedCVtestNonstatErr/nonStatSelProbs_oversampM", 
-                           oversampleMountRatio, "_n", thisN, ".RData"))
-        }
-      } else {
-        out = load(paste0("savedOutput/griddedCVtestNonstatErr/nonStatSelProbs_oversampM", 
-                          oversampleMountRatio, "_n", thisN, ".RData"))
-      }
-      
-      cols = makeRedBlueDivergingColors(64, valRange=c(0, 1), center=0.5)
-      
-      # LOO selection probabilities
-      pdf(paste0("figures/nonstatErrorIllustration/correctModelProbLOO_Score", score, "_oversampM", oversampleMountRatio, "_n", thisN, ".pdf"), width=5.1, height=5)
-      par(mar=c(2.8, 1.3, 2, 1), oma=c(0, 0, 0, 1.5), mgp=c(1.9,.7,0))
-      plot(log10(fullMat[,1]), log10(fullMat[,2]), type="n", axes=FALSE, xlab="", ylab="",
-           main=TeX(paste0("LOO correct probability ($R_{oversamp}=", oversampleMountRatio, "$, $n=$", thisN, ")")), asp=1)
-      myQuiltPlot(log10(fullMat[,1]), log10(fullMat[,2]), selProbsLOO, col=cols,
-                  add=TRUE, nx=500, ny=500, legend.mar=1.8, zlim=c(0, 1))
-      selProbMat = matrix(selProbsLOO, nrow=length(sigmaSqsNM), ncol=length(sigmaSqsM))
-      contour(log10(sigmaSqsNM), log10(sigmaSqsM), selProbMat, col=rgb(.4,.4,.4), 
-              levels=seq(.2, .8, by=.2), add=TRUE)
-      axis(1, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-.75)
-      axis(2, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-1.5)
-      mtext(TeX("$\\sigma_{epsilon,Mount}^2"), side=2, line=-.1)
-      mtext(TeX("$\\sigma_{epsilon,Plains}^2"), side=1, line=1.3)
-      points(log10(c(sigmaSqBestDat, .01)), log10(c(sigmaSqBestDat, 1)), pch=19, col=c("purple", "green"))
-      # myQuiltPlot(fullMat[,1], fullMat[,2], fullMat[,3], col=cols, 
-      #            nx=500, ny=500, log="xy", asp=1, addColorBar=TRUE, 
-      #            xlab=TeX("$\\sigma_{epsilon,Plains}^2"), ylab=TeX("$\\sigma_{epsilon,Mount}^2"), 
-      #            main="Correct model selected", legend.mar=0)
-      dev.off()
-      
-      # IW selection probabilities
-      pdf(paste0("figures/nonstatErrorIllustration/correctModelProbIW_Score", score, "_oversampM", oversampleMountRatio, "_n", thisN, ".pdf"), width=5.1, height=5)
-      par(mar=c(2.8, 1.3, 2, 1), oma=c(0, 0, 0, 1.5), mgp=c(1.9,.7,0))
-      plot(log10(fullMat[,1]), log10(fullMat[,2]), type="n", axes=FALSE, xlab="", ylab="",
-           main=TeX(paste0("IW correct probability ($R_{oversamp}=", oversampleMountRatio, "$, $n=$", thisN, ")")), asp=1)
-      myQuiltPlot(log10(fullMat[,1]), log10(fullMat[,2]), selProbsIW, col=cols,
-                  add=TRUE, nx=500, ny=500, legend.mar=1.8, zlim=c(0, 1))
-      selProbMat = matrix(selProbsIW, nrow=length(sigmaSqsNM), ncol=length(sigmaSqsM))
-      contour(log10(sigmaSqsNM), log10(sigmaSqsM), selProbMat, col=rgb(.4,.4,.4), 
-              levels=seq(.2, .8, by=.2), add=TRUE)
-      axis(1, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-.75)
-      axis(2, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-1.5)
-      mtext(TeX("$\\sigma_{epsilon,Mount}^2"), side=2, line=-.1)
-      mtext(TeX("$\\sigma_{epsilon,Plains}^2"), side=1, line=1.3)
-      points(log10(c(sigmaSqBestDat, .01)), log10(c(sigmaSqBestDat, 1)), pch=19, col=c("purple", "green"))
-      # myQuiltPlot(fullMat[,1], fullMat[,2], fullMat[,3], col=cols, 
-      #            nx=500, ny=500, log="xy", asp=1, addColorBar=TRUE, 
-      #            xlab=TeX("$\\sigma_{epsilon,Plains}^2"), ylab=TeX("$\\sigma_{epsilon,Mount}^2"), 
-      #            main="Correct model selected", legend.mar=0)
-      dev.off()
-      
-      # IW - LOO selection probabilities
-      if(oversampleMountRatio != 1) {
-        cols = makeRedBlueDivergingColors(64, range(selProbsIW-selProbsLOO), center=0)
-        pdf(paste0("figures/nonstatErrorIllustration/correctModelProbIWvsLOO_Score", score, "_oversampM", oversampleMountRatio, "_n", thisN, ".pdf"), width=5.1, height=5)
-        par(mar=c(2.8, 1.3, 2, 1), oma=c(0, 0, 0, 1.5), mgp=c(1.9,.7,0))
-        plot(log10(fullMat[,1]), log10(fullMat[,2]), type="n", axes=FALSE, xlab="", ylab="",
-             main=TeX(paste0("IW-LOO correct probability ($R_{oversamp}=", oversampleMountRatio, "$, $n=$", thisN, ")")), asp=1)
-        myQuiltPlot(log10(fullMat[,1]), log10(fullMat[,2]), selProbsIW-selProbsLOO, col=cols,
-                    add=TRUE, nx=500, ny=500, legend.mar=1.8)
-        selProbMat = matrix(selProbsIW-selProbsLOO, nrow=length(sigmaSqsNM), ncol=length(sigmaSqsM))
-        contour(log10(sigmaSqsNM), log10(sigmaSqsM), selProbMat, col=rgb(.4,.4,.4), 
-                levels=seq(-.8, .8, by=.2), add=TRUE)
-        axis(1, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-.75)
-        axis(2, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-1.5)
-        mtext(TeX("$\\sigma_{epsilon,Mount}^2"), side=2, line=-.1)
-        mtext(TeX("$\\sigma_{epsilon,Plains}^2"), side=1, line=1.3)
-        points(log10(c(sigmaSqBestDat, .01)), log10(c(sigmaSqBestDat, 1)), pch=19, col=c("purple", "green"))
-        # myQuiltPlot(fullMat[,1], fullMat[,2], fullMat[,3], col=cols, 
-        #            nx=500, ny=500, log="xy", asp=1, addColorBar=TRUE, 
-        #            xlab=TeX("$\\sigma_{epsilon,Plains}^2"), ylab=TeX("$\\sigma_{epsilon,Mount}^2"), 
-        #            main="Correct model selected", legend.mar=0)
-        dev.off()
-      }
-      
-      # model selection score (positive oriented expectation of true score of selected model - unselected model)
-      pdf(paste0("figures/nonstatErrorIllustration/modelSelectScoreLOO_Score", score, "_oversampM", oversampleMountRatio, "_n", thisN, ".pdf"), width=5.1, height=5)
-      par(mar=c(2.8, 1.3, 2, 1), oma=c(0, 0, 0, 1.5), mgp=c(1.9,.7,0))
-      plot(log10(fullMat[,1]), log10(fullMat[,2]), type="n", axes=FALSE, xlab="", ylab="",
-           main=TeX(paste0("LOO selection score ($R_{oversamp}=", oversampleMountRatio, "$, $n=$", thisN, ")")), asp=1)
-      selProbMat = matrix(selProbsLOO, nrow=length(sigmaSqsNM), ncol=length(sigmaSqsM))
-      absDiffMat = matrix(abs(scoreDiffDom), nrow=length(sigmaSqsNM), ncol=length(sigmaSqsM))
-      selectScoreLOO = absDiffMat * (2*selProbMat - 1)
-      cols = makeRedBlueDivergingColors(64, valRange=range(selectScoreLOO), center=0)
-      myQuiltPlot(log10(fullMat[,1]), log10(fullMat[,2]), selectScoreLOO, col=cols,
-                  add=TRUE, nx=500, ny=500, legend.mar=1.8)
-      contour(log10(sigmaSqsNM), log10(sigmaSqsM), selectScoreLOO, col=rgb(.4,.4,.4), add=TRUE)
-      axis(1, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-.75)
-      axis(2, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-1.5)
-      mtext(TeX("$\\sigma_{epsilon,Mount}^2"), side=2, line=-.1)
-      mtext(TeX("$\\sigma_{epsilon,Plains}^2"), side=1, line=1.3)
-      points(log10(c(sigmaSqBestDat, .01)), log10(c(sigmaSqBestDat, 1)), pch=19, col=c("purple", "green"))
-      # myQuiltPlot(fullMat[,1], fullMat[,2], fullMat[,3], col=cols, 
-      #            nx=500, ny=500, log="xy", asp=1, addColorBar=TRUE, 
-      #            xlab=TeX("$\\sigma_{epsilon,Plains}^2"), ylab=TeX("$\\sigma_{epsilon,Mount}^2"), 
-      #            main="Correct model selected", legend.mar=0)
-      dev.off()
-      
-      pdf(paste0("figures/nonstatErrorIllustration/modelSelectScoreIW_Score", score, "_oversampM", oversampleMountRatio, "_n", thisN, ".pdf"), width=5.1, height=5)
-      par(mar=c(2.8, 1.3, 2, 1), oma=c(0, 0, 0, 1.5), mgp=c(1.9,.7,0))
-      plot(log10(fullMat[,1]), log10(fullMat[,2]), type="n", axes=FALSE, xlab="", ylab="",
-           main=TeX(paste0("IW selection score ($R_{oversamp}=", oversampleMountRatio, "$, $n=$", thisN, ")")), asp=1)
-      selProbMat = matrix(selProbsIW, nrow=length(sigmaSqsNM), ncol=length(sigmaSqsM))
-      absDiffMat = matrix(abs(scoreDiffDom), nrow=length(sigmaSqsNM), ncol=length(sigmaSqsM))
-      selectScoreIW = absDiffMat * (2*selProbMat - 1)
-      cols = makeRedBlueDivergingColors(64, valRange=range(selectScoreIW), center=0)
-      myQuiltPlot(log10(fullMat[,1]), log10(fullMat[,2]), selectScoreIW, col=cols,
-                  add=TRUE, nx=500, ny=500, legend.mar=1.8)
-      contour(log10(sigmaSqsNM), log10(sigmaSqsM), selectScoreIW, col=rgb(.4,.4,.4), add=TRUE)
-      axis(1, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-.75)
-      axis(2, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-1.5)
-      mtext(TeX("$\\sigma_{epsilon,Mount}^2"), side=2, line=-.1)
-      mtext(TeX("$\\sigma_{epsilon,Plains}^2"), side=1, line=1.3)
-      points(log10(c(sigmaSqBestDat, .01)), log10(c(sigmaSqBestDat, 1)), pch=19, col=c("purple", "green"))
-      # myQuiltPlot(fullMat[,1], fullMat[,2], fullMat[,3], col=cols, 
-      #            nx=500, ny=500, log="xy", asp=1, addColorBar=TRUE, 
-      #            xlab=TeX("$\\sigma_{epsilon,Plains}^2"), ylab=TeX("$\\sigma_{epsilon,Mount}^2"), 
-      #            main="Correct model selected", legend.mar=0)
-      dev.off()
-      
-      if(oversampleMountRatio != 1) {
-        pdf(paste0("figures/nonstatErrorIllustration/modelSelectScoreIWvsLOO_Score", score, "_oversampM", oversampleMountRatio, "_n", thisN, ".pdf"), width=5.1, height=5)
-        par(mar=c(2.8, 1.3, 2, 1), oma=c(0, 0, 0, 1.5), mgp=c(1.9,.7,0))
-        plot(log10(fullMat[,1]), log10(fullMat[,2]), type="n", axes=FALSE, xlab="", ylab="",
-             main=TeX(paste0("IW-LOO selection score ($R_{oversamp}=", oversampleMountRatio, "$, $n=$", thisN, ")")), asp=1)
-        selectScoreDiff = selectScoreIW - selectScoreLOO
-        cols = makeRedBlueDivergingColors(64, valRange=range(selectScoreDiff), center=0)
-        myQuiltPlot(log10(fullMat[,1]), log10(fullMat[,2]), selectScoreDiff, col=cols,
-                    add=TRUE, nx=500, ny=500, legend.mar=1.8)
-        contour(log10(sigmaSqsNM), log10(sigmaSqsM), selectScoreDiff, col=rgb(.4,.4,.4), add=TRUE)
-        axis(1, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-.75)
-        axis(2, at=seq(-2, 0, by=1), labels=c(".01", ".1", "1"), line=-1.5)
-        mtext(TeX("$\\sigma_{epsilon,Mount}^2"), side=2, line=-.1)
-        mtext(TeX("$\\sigma_{epsilon,Plains}^2"), side=1, line=1.3)
-        points(log10(c(sigmaSqBestDat, .01)), log10(c(sigmaSqBestDat, 1)), pch=19, col=c("purple", "green"))
-        # myQuiltPlot(fullMat[,1], fullMat[,2], fullMat[,3], col=cols, 
-        #            nx=500, ny=500, log="xy", asp=1, addColorBar=TRUE, 
-        #            xlab=TeX("$\\sigma_{epsilon,Plains}^2"), ylab=TeX("$\\sigma_{epsilon,Mount}^2"), 
-        #            main="Correct model selected", legend.mar=0)
-        dev.off()
-      }
-      
-      thisCurrTime = proc.time()[3]
-      estT = estTimeLeft(thisStartTime, thisCurrTime, i, length(ns))
-      print(paste0("iter j=", j, "/", length(ns), ", est minutes left: ", round(estT/60, 1)))
-    }
-    
     currTime = proc.time()[3]
-    estT = estTimeLeft(startTime, currTime, i, length(oversampleMountRatioSeq))
+    estT = estTimeLeft(startTime, currTime, i, length(rhoLamSeq))
     print(paste0("est minutes left: ", round(estT/60, 1)))
   }
   

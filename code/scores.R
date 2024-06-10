@@ -1324,6 +1324,14 @@ expectedIntervalScore = function(truth, truth.var, est, est.var, lower=NULL, upp
                          returnCoverage=FALSE, doFuzzyReject=FALSE, getAverage=TRUE, ns=NULL, 
                          na.rm=FALSE, weights=rep(1, length(truth))) {
   
+  maxArgL = max(c(length(truth), length(truth.var), length(est), length(est.var)))
+  truth = rep(truth, maxArgL/length(truth))
+  truth.var = rep(truth.var, maxArgL/length(truth.var))
+  est = rep(est, maxArgL/length(est))
+  est.var = rep(est.var, maxArgL/length(est.var))
+  weights = rep(weights, maxArgL/length(weights))
+  
+  
   if(returnCoverage || doFuzzyReject || !is.null(estMat) || returnIntervalWidth) {
     stop("option not implemented yet")
   }
@@ -1605,6 +1613,164 @@ covIntervalScore = function(truth, truth.var, est1, est.var1, est2, est.var2,
     weights = weights*(1/sum(weights, na.rm=TRUE))
     sum((res)*weights, na.rm=na.rm)
   }
+}
+
+# same is expectedIntervalScore, but calculates expected IS where sampling rate 
+# and error variance are possibly correlated log Gaussian processes. I.e. 
+# (  log lambda   )    N((alphaLam )   (      betaLam^2        rhoLam betaLam betaEps                          ))
+# (log sigmaEps^2 )  ~  ((alphaEps ),  (rhoLam betaLam betaEps         betaEps^2        rhoEps betaEps betaEps1))
+# (log sigmaEps1^2)     ((alphaEps1)   (                       rhoEps betaEps betaEps1         betaEps1^2      ))
+expectedIntervalScoreSmooth = function(rhoLam=0, alphaLam=0, betaLam=1, 
+                                       rhoEps=0, alphaEps=0, betaEps=1,
+                                       alphaEps1=0, betaEps1=1,
+                                       nominalCvg=.8, getAverage=TRUE, 
+                                       nIntPts=50, tailFocus=0.05) {
+  
+  # maximum argument length
+  maxArgL = max(c(length(rhoLam), length(alphaLam), length(betaLam), 
+  length(rhoEps), length(alphaEps), length(betaEps), 
+  length(alphaEps1), length(betaEps1)))
+  
+  if(maxArgL > 1) {
+    # recycle arguments to max arg length
+    rhoLam = rep(rhoLam, maxArgL/length(rhoLam))
+    alphaLam = rep(alphaLam, maxArgL/length(alphaLam))
+    betaLam = rep(betaLam, maxArgL/length(betaLam))
+    rhoEps = rep(rhoEps, maxArgL/length(rhoEps))
+    alphaEps = rep(alphaEps, maxArgL/length(alphaEps))
+    betaEps = rep(betaEps, maxArgL/length(betaEps))
+    alphaEps1 = rep(alphaEps1, maxArgL/length(alphaEps1))
+    betaEps1 = rep(betaEps1, maxArgL/length(betaEps1))
+    
+    # apply this function to each argument
+    return(mapply(expectedIntervalScoreSmooth, 
+                  rhoLam = rhoLam, 
+                  alphaLam = alphaLam, 
+                  betaLam = betaLam, 
+                  rhoEps = rhoEps, 
+                  alphaEps = alphaEps, 
+                  betaEps = betaEps, 
+                  alphaEps1 = alphaEps1, 
+                  betaEps1 = betaEps1))
+  }
+  
+  
+  # set integration pts based on quantile qudrature depending on tail focus
+  ab = 1-tailFocus
+  percsTemp = seq(0, 1, l=2*nIntPts)[-1]
+  percWidths = percsTemp[1]
+  percsTemp = percsTemp - percWidths/2
+  percs = qbeta(percsTemp, ab, ab)
+  intWeights = diff(c(0, percs[seq(2, length(percs), by=2)], 1))
+  percs = percs[seq(1, length(percs), by=2)]
+  quantsEps = qnorm(percs, alphaEps, betaEps)
+  
+  condIntegral = function(logSigmaEpsSq) {
+    # get conditional distribution of log sigmaEps1^2 | sigmaEps^2
+    logMuEps1 = alphaEps1 + (rhoEps * betaEps1/betaEps) * (logSigmaEpsSq - alphaEps)
+    logVarEps1 = (1 - rhoEps^2) * betaEps1^2
+    
+    # get integration points from the conditional distribution
+    quantsEps1 = qnorm(percs, logMuEps1, sqrt(logVarEps1))
+    
+    if(betaLam != 0) {
+      # get conditional distribution of log lambda | sigmaEps^2 if need be
+      logMuLam = alphaLam + (rhoLam * betaLam/betaEps) * (logSigmaEpsSq - alphaEps)
+      logVarLam = (1 - rhoLam^2) * betaLam^2
+      
+      # get conditional mean of lambda (based on lognormal distribution)
+      condMeanLam = exp(logMuLam + logVarLam*0.5)
+    } else {
+      condMeanLam = 1
+    }
+    
+    # get conditional mean of interval score at each integration point
+    sigmaEpsSq = exp(logSigmaEpsSq)
+    sigmaEpsSq1IntPts = exp(quantsEps1)
+    condMeanIS = expectedIntervalScore(0, sigmaEpsSq, 0, sigmaEpsSq1IntPts, 
+                                       nominalCvg=nominalCvg, getAverage=FALSE)
+    
+    # don't multiply by conditional lognormal density since we are already
+    # integrating with respect to the conditional distribution by selecting 
+    # quantiles from the conditional distribution and equally weighting them.
+    weighted.mean(condMeanIS * condMeanLam, w=intWeights)
+  }
+  
+  # don't multiply by lognormal density since we are already integrating with
+  # respect to the distribution of sigmaEps^2 by selecting quantiles from the
+  # conditional distribution and equally weighting them.
+  weighted.mean(sapply(quantsEps, condIntegral), w=intWeights)
+}
+
+# same as expectedIntervalScoreSmooth, but uses spline integration
+expectedIntervalScoreSmooth2 = function(rhoLam=0, alphaLam=0, betaLam=1, 
+                                       rhoEps=0, alphaEps=0, betaEps=1,
+                                       alphaEps1=0, betaEps1=1,
+                                       nominalCvg=.8, getAverage=TRUE, npts=50) {
+  
+  # maximum argument length
+  maxArgL = max(c(length(rhoLam), length(alphaLam), length(betaLam), 
+                  length(rhoEps), length(alphaEps), length(betaEps), 
+                  length(alphaEps1), length(betaEps1)))
+  
+  if(maxArgL > 1) {
+    # recycle arguments to max arg length
+    rhoLam = rep(rhoLam, maxArgL/length(rhoLam))
+    alphaLam = rep(alphaLam, maxArgL/length(alphaLam))
+    betaLam = rep(betaLam, maxArgL/length(betaLam))
+    rhoEps = rep(rhoEps, maxArgL/length(rhoEps))
+    alphaEps = rep(alphaEps, maxArgL/length(alphaEps))
+    betaEps = rep(betaEps, maxArgL/length(betaEps))
+    alphaEps1 = rep(alphaEps1, maxArgL/length(alphaEps1))
+    betaEps1 = rep(betaEps1, maxArgL/length(betaEps1))
+    
+    # apply this function to each argument
+    return(mapply(expectedIntervalScoreSmooth, 
+                  rhoLam = rhoLam, 
+                  alphaLam = alphaLam, 
+                  betaLam = betaLam, 
+                  rhoEps = rhoEps, 
+                  alphaEps = alphaEps, 
+                  betaEps = betaEps, 
+                  alphaEps1 = alphaEps1, 
+                  betaEps1 = betaEps1))
+  }
+  
+  condIntegral = function(logSigmaEpsSq) {
+    # get conditional distribution of log sigmaEps1^2 | sigmaEps^2
+    logMuEps1 = alphaEps1 + (rhoEps * betaEps1/betaEps) * (logSigmaEpsSq - alphaEps)
+    logVarEps1 = (1 - rhoEps^2) * betaEps1^2
+    
+    # get integration points from the conditional distribution
+    quantsEps1 = qnorm(percs, logMuEps1, sqrt(logVarEps1))
+    
+    if(betaLam != 0) {
+      # get conditional distribution of log lambda | sigmaEps^2 if need be
+      logMuLam = alphaLam + (rhoLam * betaLam/betaEps) * (logSigmaEpsSq - alphaEps)
+      logVarLam = (1 - rhoLam^2) * betaLam^2
+      
+      # get conditional mean of lambda (based on lognormal distribution)
+      condMeanLam = exp(logMuLam + logVarLam*0.5)
+    } else {
+      condMeanLam = 1
+    }
+    
+    # get conditional mean of interval score at each integration point
+    sigmaEpsSq = exp(logSigmaEpsSq)
+    sigmaEpsSq1IntPts = exp(quantsEps1)
+    condMeanIS = expectedIntervalScore(0, sigmaEpsSq, 0, sigmaEpsSq1IntPts, 
+                                       nominalCvg=nominalCvg, getAverage=getAverage)
+    
+    # don't multiply by conditional lognormal density since we are already
+    # integrating with respect to the conditional distribution by selecting 
+    # quantiles from the conditional distribution and equally weighting them.
+    mean(condMeanIS * condMeanLam)
+  }
+  
+  # don't multiply by lognormal density since we are already integrating with
+  # respect to the distribution of sigmaEps^2 by selecting quantiles from the
+  # conditional distribution and equally weighting them.
+  mean(sapply(quantsEps, condIntegral))
 }
 
 # averages a list of many tables, each returned from the getScores function with distanceBreaks set by user

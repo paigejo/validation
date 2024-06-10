@@ -145,6 +145,10 @@ normDataWithin <- function(data=NULL, idvar, measurevar, betweenvars=NULL,
   return(data)
 }
 
+eFoldedNormal = function(mus, sds) {
+  sds * sqrt(2/pi) * exp(-mus^2/(2*sds^2)) + mus*(1 - 2*pnorm(-mus/sds))
+}
+
 # estimates remaining computation time in seconds before a for loop is finished
 estTimeLeft = function(startTime, currTime, finishedIter, totalIter) {
   timeUsed = currTime - startTime
