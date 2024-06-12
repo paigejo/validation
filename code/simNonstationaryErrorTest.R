@@ -25,7 +25,8 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
                                           nx=100, ny=100, sigmaEpsSqNonMount=.1^2, sigmaEpsSqMount=1^2, 
                                           sigmaEpsSqNonMountWrong1=.1^2, sigmaEpsSqMountWrong1=.1^2, 
                                           sigmaEpsSqNonMountWrong2=.1, sigmaEpsSqMountWrong2=.1, 
-                                          allSeeds=123, printProgress=FALSE, printPhat=FALSE, saveResults=TRUE) {
+                                          allSeeds=123, printProgress=FALSE, printPhat=FALSE, 
+                                          saveResults=TRUE, subsample=1) {
   
   if(iter > 1) {
     currT = proc.time()[3]
@@ -721,30 +722,68 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
   }
   
   # 12. Calculate true model Scores ----
-  condDistn = condMeanMVN(SigmaAA=rep(rGRFargsTruth$sigma^2, nrow(locs)), SigmaAB=SigmaGridToSample, SigmaBB=SigmaSample, 
-                          ysB=ys, getFullCov=FALSE, getCondVar=TRUE)
-  muAcondB = condDistn$muAcondB
-  varAcondB = condDistn$varAcondB
-  condDistn = condMeanMVN(SigmaAA=rep(rGRFargsWrong1$sigma^2, nrow(locs)), SigmaAB=SigmaGridToSampleWrong1, SigmaBB=SigmaSampleWrong1, 
-                          ysB=ys, getFullCov=FALSE, getCondVar=TRUE)
-  muAcondBWrong1 = condDistn$muAcondB
-  varAcondBWrong1 = condDistn$varAcondB
-  condDistn = condMeanMVN(SigmaAA=rep(rGRFargsWrong2$sigma^2, nrow(locs)), SigmaAB=SigmaGridToSampleWrong2, SigmaBB=SigmaSampleWrong2, 
-                          ysB=ys, getFullCov=FALSE, getCondVar=TRUE)
-  muAcondBWrong2 = condDistn$muAcondB
-  varAcondBWrong2 = condDistn$varAcondB
+  browser()
+  if(subsample == 1) {
+    condDistn = condMeanMVN(SigmaAA=rep(rGRFargsTruth$sigma^2, nrow(locs)), SigmaAB=SigmaGridToSample, SigmaBB=SigmaSample, 
+                            ysB=ys, getFullCov=FALSE, getCondVar=TRUE)
+    muAcondB = condDistn$muAcondB
+    varAcondB = condDistn$varAcondB
+    condDistn = condMeanMVN(SigmaAA=rep(rGRFargsWrong1$sigma^2, nrow(locs)), SigmaAB=SigmaGridToSampleWrong1, SigmaBB=SigmaSampleWrong1, 
+                            ysB=ys, getFullCov=FALSE, getCondVar=TRUE)
+    muAcondBWrong1 = condDistn$muAcondB
+    varAcondBWrong1 = condDistn$varAcondB
+    condDistn = condMeanMVN(SigmaAA=rep(rGRFargsWrong2$sigma^2, nrow(locs)), SigmaAB=SigmaGridToSampleWrong2, SigmaBB=SigmaSampleWrong2, 
+                            ysB=ys, getFullCov=FALSE, getCondVar=TRUE)
+    muAcondBWrong2 = condDistn$muAcondB
+    varAcondBWrong2 = condDistn$varAcondB
+    
+    # calculate Scores for the grid cells (called MSE for historical reasons...)
+    # trueMSE = mean((truth - muAcondB)^2) + sigmaEpsSq1
+    # wrongMSE = mean((truth - muAcondBwrong)^2) + sigmaEpsSq1 # add sigmaEpsSq1, the true error variance, not sigmaEpsSq2
+    
+    trueMSE = expectedIntervalScore(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondB, est.var=varAcondB + sigmaEpsSqTrueLoc)
+    wrongMSE1 = expectedIntervalScore(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong1, est.var=varAcondBWrong1 + sigmaEpsSqWrong1Loc)
+    wrongMSE2 = expectedIntervalScore(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong2, est.var=varAcondBWrong2 + sigmaEpsSqWrong2Loc)
+    
+    # trueCRPS = expectedCRPS(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondB, est.var=varAcondB + sigmaEpsSqTrueLoc)
+    # wrongCRPS1 = expectedCRPS(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong1, est.var=varAcondBWrong1 + sigmaEpsSqWrong1Loc)
+    # wrongCRPS2 = expectedCRPS(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong2, est.var=varAcondBWrong2 + sigmaEpsSqWrong2Loc)
+  } else {
+    # keep only every subsample locations on grid
+    subsampleI = seq(1, nrow(locs), by=subsample)
+    locsSub = locs[subsampleI,]
+    truthSub = truth[subsampleI,]
+    SigmaGridToSampleSub = SigmaGridToSample[subsampleI,]
+    SigmaGridToSampleWrong1Sub = SigmaGridToSampleWrong1[subsampleI,]
+    SigmaGridToSampleWrong2Sub = SigmaGridToSampleWrong2[subsampleI,]
+    sigmaEpsSqTrueLocSub = sigmaEpsSqTrueLoc[subsampleI]
+    
+    condDistn = condMeanMVN(SigmaAA=rep(rGRFargsTruth$sigma^2, nrow(locsSub)), SigmaAB=SigmaGridToSampleSub, SigmaBB=SigmaSample, 
+                            ysB=ys, getFullCov=FALSE, getCondVar=TRUE)
+    muAcondB = condDistn$muAcondB
+    varAcondB = condDistn$varAcondB
+    condDistn = condMeanMVN(SigmaAA=rep(rGRFargsWrong1$sigma^2, nrow(locsSub)), SigmaAB=SigmaGridToSampleWrong1Sub, SigmaBB=SigmaSampleWrong1, 
+                            ysB=ys, getFullCov=FALSE, getCondVar=TRUE)
+    muAcondBWrong1 = condDistn$muAcondB
+    varAcondBWrong1 = condDistn$varAcondB
+    condDistn = condMeanMVN(SigmaAA=rep(rGRFargsWrong2$sigma^2, nrow(locsSub)), SigmaAB=SigmaGridToSampleWrong2Sub, SigmaBB=SigmaSampleWrong2, 
+                            ysB=ys, getFullCov=FALSE, getCondVar=TRUE)
+    muAcondBWrong2 = condDistn$muAcondB
+    varAcondBWrong2 = condDistn$varAcondB
+    
+    # calculate Scores for the grid cells (called MSE for historical reasons...)
+    # trueMSE = mean((truth - muAcondB)^2) + sigmaEpsSq1
+    # wrongMSE = mean((truth - muAcondBwrong)^2) + sigmaEpsSq1 # add sigmaEpsSq1, the true error variance, not sigmaEpsSq2
+    
+    trueMSE = expectedIntervalScore(truth=truthSub, truth.var=sigmaEpsSqTrueLocSub, est=muAcondB, est.var=varAcondB + sigmaEpsSqTrueLoc)
+    wrongMSE1 = expectedIntervalScore(truth=truthSub, truth.var=sigmaEpsSqTrueLocSub, est=muAcondBWrong1, est.var=varAcondBWrong1 + sigmaEpsSqWrong1Loc)
+    wrongMSE2 = expectedIntervalScore(truth=truthSub, truth.var=sigmaEpsSqTrueLocSub, est=muAcondBWrong2, est.var=varAcondBWrong2 + sigmaEpsSqWrong2Loc)
+    
+    # trueCRPS = expectedCRPS(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondB, est.var=varAcondB + sigmaEpsSqTrueLoc)
+    # wrongCRPS1 = expectedCRPS(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong1, est.var=varAcondBWrong1 + sigmaEpsSqWrong1Loc)
+    # wrongCRPS2 = expectedCRPS(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong2, est.var=varAcondBWrong2 + sigmaEpsSqWrong2Loc)
+  }
   
-  # calculate Scores for the grid cells (called MSE for historical reasons...)
-  # trueMSE = mean((truth - muAcondB)^2) + sigmaEpsSq1
-  # wrongMSE = mean((truth - muAcondBwrong)^2) + sigmaEpsSq1 # add sigmaEpsSq1, the true error variance, not sigmaEpsSq2
-  
-  trueMSE = expectedIntervalScore(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondB, est.var=varAcondB + sigmaEpsSqTrueLoc)
-  wrongMSE1 = expectedIntervalScore(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong1, est.var=varAcondBWrong1 + sigmaEpsSqWrong1Loc)
-  wrongMSE2 = expectedIntervalScore(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong2, est.var=varAcondBWrong2 + sigmaEpsSqWrong2Loc)
-  
-  # trueCRPS = expectedCRPS(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondB, est.var=varAcondB + sigmaEpsSqTrueLoc)
-  # wrongCRPS1 = expectedCRPS(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong1, est.var=varAcondBWrong1 + sigmaEpsSqWrong1Loc)
-  # wrongCRPS2 = expectedCRPS(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong2, est.var=varAcondBWrong2 + sigmaEpsSqWrong2Loc)
   
   if(FALSE) {
     
