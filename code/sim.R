@@ -660,7 +660,7 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
                              propMount=.3, oversampleMountRatio=1/5, regenResults=TRUE, 
                              printProgress=FALSE, relTicks1=NULL, relTickLabs1=NULL, 
                              relTicks2=NULL, relTickLabs2=NULL, unif=FALSE, 
-                             preferential=FALSE) {
+                             preferential=FALSE, saveResults=TRUE) {
   set.seed(seed)
   seeds = sample(1:100000, niter)
   
@@ -720,7 +720,7 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
                                               sigmaEpsSqNonMount=sigmaEpsSqNonMount, sigmaEpsSqMount=sigmaEpsSqMount, 
                                               sigmaEpsSqNonMountWrong1=sigmaEpsSqNonMountWrong1, sigmaEpsSqMountWrong1=sigmaEpsSqMountWrong1, 
                                               sigmaEpsSqNonMountWrong2=sigmaEpsSqNonMountWrong2, sigmaEpsSqMountWrong2=sigmaEpsSqMountWrong2, 
-                                              printProgress=printProgress))
+                                              printProgress=printProgress, saveResults=saveResults))
       
     }
   } else {

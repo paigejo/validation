@@ -25,7 +25,7 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
                                           nx=100, ny=100, sigmaEpsSqNonMount=.1^2, sigmaEpsSqMount=1^2, 
                                           sigmaEpsSqNonMountWrong1=.1^2, sigmaEpsSqMountWrong1=.1^2, 
                                           sigmaEpsSqNonMountWrong2=.1, sigmaEpsSqMountWrong2=.1, 
-                                          allSeeds=123, printProgress=FALSE, printPhat=FALSE) {
+                                          allSeeds=123, printProgress=FALSE, printPhat=FALSE, saveResults=TRUE) {
   
   if(iter > 1) {
     currT = proc.time()[3]
@@ -747,35 +747,42 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
   # wrongCRPS2 = expectedCRPS(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong2, est.var=varAcondBWrong2 + sigmaEpsSqWrong2Loc)
   
   if(FALSE) {
-    # out = estPredMSErange(sigma=1, cov.args=rGRFargsTruth$cov.args, doPlot=TRUE, 
-    #                       nPts=n)
     
+    pdf("figures/nonstatErrorTest/test_Truth.pdf", width=5, height=5)
+    plotWithColor(locs[,1], locs[,2], truth, cex=.2, pch=19)
+    dev.off()
     
-    plot(gridNs, griddedCVs, type="n", log="x", axes=FALSE, 
-         ylim=c(0, max(griddedCVs)), xlab="Blocks per side", 
-         ylab="MSE", main="Gridded CV vs resolution")
-    axis(side=1, at=gridNs)
-    axis(side=2)
-    box()
-    lines(gridNs, griddedCVs, type="o", pch=19, col="blue")
-    abline(h=LOOCV, lty=2, col="purple")
-    abline(h=trueMSE, lty=2, col="green")
-    legend("topright", c("Gridded", "LOO", "Truth"), col=c("blue", "purple", "green"), 
-           pch=c(19, NA, NA), lty=c(1, 2, 2))
+    pdf("figures/nonstatErrorTest/test_Mount.pdf", width=5, height=5)
+    plotWithColor(locs[,1], locs[,2], isMount, cex=.2, pch=19, colScale=c("green", "brown"))
+    dev.off()
     
-    plot(gridNs, griddedCVs, type="n", log="x", axes=FALSE, 
-         ylim=c(0, 1+sigmaEpsSq), xlab="Blocks per side", 
-         ylab="MSE", main="Gridded CV vs resolution")
-    axis(side=1, at=gridNs)
-    axis(side=2)
-    box()
-    lines(gridNs, griddedCVs, type="o", pch=19, col="blue")
-    abline(h=LOOCV, lty=2, col="purple")
-    abline(h=trueMSE, lty=2, col="green")
-    abline(h=1+sigmaEpsSq, lty=2, col="red")
-    legend("right", c("Gridded", "LOO", "Extrapolation", "Interpolation"), 
-           col=c("blue", "purple", "red", "green"), 
-           pch=c(19, NA, NA, NA), lty=c(1, 2, 2, 2))
+    pdf("figures/nonstatErrorTest/test_dat.pdf", width=5, height=5)
+    plotWithColor(xs[,1], xs[,2], ys, cex=.1, pch=19)
+    dev.off()
+    
+    pdf("figures/nonstatErrorTest/test_TruePreds.pdf", width=5, height=5)
+    plotWithColor(locs[,1], locs[,2], muAcondB, cex=.2, pch=19)
+    dev.off()
+    
+    pdf("figures/nonstatErrorTest/test_TrueResids.pdf", width=5, height=5)
+    plotWithColor(locs[,1], locs[,2], truth-muAcondB, cex=.2, pch=19)
+    dev.off()
+    
+    pdf("figures/nonstatErrorTest/test_Wrong1Preds.pdf", width=5, height=5)
+    plotWithColor(locs[,1], locs[,2], muAcondBWrong1, cex=.2, pch=19)
+    dev.off()
+    
+    pdf("figures/nonstatErrorTest/test_Wrong1Resids.pdf", width=5, height=5)
+    plotWithColor(locs[,1], locs[,2], truth-muAcondBWrong1, cex=.2, pch=19)
+    dev.off()
+    
+    pdf("figures/nonstatErrorTest/test_Wrong2Preds.pdf", width=5, height=5)
+    plotWithColor(locs[,1], locs[,2], muAcondBWrong2, cex=.2, pch=19)
+    dev.off()
+    
+    pdf("figures/nonstatErrorTest/test_Wrong2Resids.pdf", width=5, height=5)
+    plotWithColor(locs[,1], locs[,2], truth-muAcondBWrong2, cex=.2, pch=19)
+    dev.off()
   }
   
   # calculate some theoretical properties of the sampling weights
@@ -785,52 +792,54 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
   estVarWVC = mean((1/rateEsts - 1)^2)
   
   # 13. Save result ----
-  save(trueMSE, wrongMSE1, wrongMSE2, 
-       LOOCVs, LOOCVsWrong1, LOOCVsWrong2, 
-       LOOCV, LOORCV, LOOR2CV, 
-       LOOCVWrong1, LOORCVWrong1, LOOR2CVWrong1, 
-       LOOCVWrong2, LOORCVWrong2, LOOR2CVWrong2, 
-       LOOISCV, LOOISRCV, LOOISR2CV, 
-       LOOISPCV, LOOISPRCV, LOOISPR2CV, 
-       LOOISPCVWrong1, LOOISPRCVWrong1, LOOISPR2CVWrong1, 
-       LOOISCVWrong1, LOOISRCVWrong1, LOOISR2CVWrong1, 
-       LOOISPCVWrong2, LOOISPRCVWrong2, LOOISPR2CVWrong2, 
-       LOOISCVWrong2, LOOISRCVWrong2, LOOISR2CVWrong2, 
-       LOOVCCV, LOOVCRCV, LOOVCR2CV, 
-       LOOVCPCV, LOOVCPRCV, LOOVCPR2CV, 
-       LOOVCCVWrong1, LOOVCRCVWrong1, LOOVCR2CVWrong1, 
-       LOOVCPCVWrong1, LOOVCPRCVWrong1, LOOVCPR2CVWrong1, 
-       LOOVCCVWrong2, LOOVCRCVWrong2, LOOVCR2CVWrong2, 
-       LOOVCPCVWrong2, LOOVCPRCVWrong2, LOOVCPR2CVWrong2, 
-       
-       KFoldCVs, KFoldCVsWrong1, KFoldCVsWrong2, 
-       KFoldCV, KFoldRCV, KFoldR2CV, 
-       KFoldCVWrong1, KFoldRCVWrong1, KFoldR2CVWrong1, 
-       KFoldCVWrong2, KFoldRCVWrong2, KFoldR2CVWrong2, 
-       KFoldISCV, KFoldISRCV, KFoldISR2CV, 
-       KFoldISPCV, KFoldISPRCV, KFoldISPR2CV, 
-       KFoldISPCVWrong1, KFoldISPRCVWrong1, KFoldISPR2CVWrong1, 
-       KFoldISCVWrong1, KFoldISRCVWrong1, KFoldISR2CVWrong1, 
-       KFoldISPCVWrong2, KFoldISPRCVWrong2, KFoldISPR2CVWrong2, 
-       KFoldISCVWrong2, KFoldISRCVWrong2, KFoldISR2CVWrong2, 
-       KFoldVCCV, KFoldVCRCV, KFoldVCR2CV, 
-       KFoldVCCVWrong1, KFoldVCRCVWrong1, KFoldVCR2CVWrong1, 
-       KFoldVCCVWrong2, KFoldVCRCVWrong2, KFoldVCR2CVWrong2, 
-       KFoldVCPCV, KFoldVCPRCV, KFoldVCPR2CV, 
-       KFoldVCPCVWrong1, KFoldVCPRCVWrong1, KFoldVCPR2CVWrong1, 
-       KFoldVCPCVWrong2, KFoldVCPRCVWrong2, KFoldVCPR2CVWrong2, 
-       
-       griddedCVs, griddedCVsWrong1, griddedCVsWrong2, gridNs, 
-       iter, rGRFargsTruth, rGRFargsWrong1, rGRFargsWrong2, 
-       n1, nx, ny, propMount, propSamplesMount, Ks, 
-       sigmaEpsSqNonMount, sigmaEpsSqMount, 
-       sigmaEpsSqNonMountWrong1, sigmaEpsSqMountWrong1, 
-       sigmaEpsSqNonMountWrong2, sigmaEpsSqMountWrong2, 
-       allSeeds, trueVarW, estVarWVC, 
-       file=paste0("savedOutput/griddedCVtestNonstatErr/n1", n1, "_pMount", propMount, "_Rosamp", oversampleMountRatio, 
-                   "_s2M", sigmaEpsSqMount, "_", sigmaEpsSqMountWrong1, "_", sigmaEpsSqMountWrong2, 
-                   "_s2NM", sigmaEpsSqNonMount, "_", sigmaEpsSqNonMountWrong1, "_", sigmaEpsSqNonMountWrong2, 
-                   "_iter", iter, ".RData"))
+  if(saveResults) {
+    save(trueMSE, wrongMSE1, wrongMSE2, 
+         LOOCVs, LOOCVsWrong1, LOOCVsWrong2, 
+         LOOCV, LOORCV, LOOR2CV, 
+         LOOCVWrong1, LOORCVWrong1, LOOR2CVWrong1, 
+         LOOCVWrong2, LOORCVWrong2, LOOR2CVWrong2, 
+         LOOISCV, LOOISRCV, LOOISR2CV, 
+         LOOISPCV, LOOISPRCV, LOOISPR2CV, 
+         LOOISPCVWrong1, LOOISPRCVWrong1, LOOISPR2CVWrong1, 
+         LOOISCVWrong1, LOOISRCVWrong1, LOOISR2CVWrong1, 
+         LOOISPCVWrong2, LOOISPRCVWrong2, LOOISPR2CVWrong2, 
+         LOOISCVWrong2, LOOISRCVWrong2, LOOISR2CVWrong2, 
+         LOOVCCV, LOOVCRCV, LOOVCR2CV, 
+         LOOVCPCV, LOOVCPRCV, LOOVCPR2CV, 
+         LOOVCCVWrong1, LOOVCRCVWrong1, LOOVCR2CVWrong1, 
+         LOOVCPCVWrong1, LOOVCPRCVWrong1, LOOVCPR2CVWrong1, 
+         LOOVCCVWrong2, LOOVCRCVWrong2, LOOVCR2CVWrong2, 
+         LOOVCPCVWrong2, LOOVCPRCVWrong2, LOOVCPR2CVWrong2, 
+         
+         KFoldCVs, KFoldCVsWrong1, KFoldCVsWrong2, 
+         KFoldCV, KFoldRCV, KFoldR2CV, 
+         KFoldCVWrong1, KFoldRCVWrong1, KFoldR2CVWrong1, 
+         KFoldCVWrong2, KFoldRCVWrong2, KFoldR2CVWrong2, 
+         KFoldISCV, KFoldISRCV, KFoldISR2CV, 
+         KFoldISPCV, KFoldISPRCV, KFoldISPR2CV, 
+         KFoldISPCVWrong1, KFoldISPRCVWrong1, KFoldISPR2CVWrong1, 
+         KFoldISCVWrong1, KFoldISRCVWrong1, KFoldISR2CVWrong1, 
+         KFoldISPCVWrong2, KFoldISPRCVWrong2, KFoldISPR2CVWrong2, 
+         KFoldISCVWrong2, KFoldISRCVWrong2, KFoldISR2CVWrong2, 
+         KFoldVCCV, KFoldVCRCV, KFoldVCR2CV, 
+         KFoldVCCVWrong1, KFoldVCRCVWrong1, KFoldVCR2CVWrong1, 
+         KFoldVCCVWrong2, KFoldVCRCVWrong2, KFoldVCR2CVWrong2, 
+         KFoldVCPCV, KFoldVCPRCV, KFoldVCPR2CV, 
+         KFoldVCPCVWrong1, KFoldVCPRCVWrong1, KFoldVCPR2CVWrong1, 
+         KFoldVCPCVWrong2, KFoldVCPRCVWrong2, KFoldVCPR2CVWrong2, 
+         
+         griddedCVs, griddedCVsWrong1, griddedCVsWrong2, gridNs, 
+         iter, rGRFargsTruth, rGRFargsWrong1, rGRFargsWrong2, 
+         n1, nx, ny, propMount, propSamplesMount, Ks, 
+         sigmaEpsSqNonMount, sigmaEpsSqMount, 
+         sigmaEpsSqNonMountWrong1, sigmaEpsSqMountWrong1, 
+         sigmaEpsSqNonMountWrong2, sigmaEpsSqMountWrong2, 
+         allSeeds, trueVarW, estVarWVC, 
+         file=paste0("savedOutput/griddedCVtestNonstatErr/n1", n1, "_pMount", propMount, "_Rosamp", oversampleMountRatio, 
+                     "_s2M", sigmaEpsSqMount, "_", sigmaEpsSqMountWrong1, "_", sigmaEpsSqMountWrong2, 
+                     "_s2NM", sigmaEpsSqNonMount, "_", sigmaEpsSqNonMountWrong1, "_", sigmaEpsSqNonMountWrong2, 
+                     "_iter", iter, ".RData"))
+  }
   
   list(trueMSE=trueMSE, wrongMSE1=wrongMSE1, wrongMSE2=wrongMSE2, 
        LOOCVs=LOOCVs, LOOCVsWrong1=LOOCVsWrong1, LOOCVsWrong2=LOOCVsWrong2, 
