@@ -1939,8 +1939,8 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
       dev.off()
     } else {
       dat = data.frame(
-        Method=factor(rep(c(plotTitleType, plotGriddedType, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), each=niter), 
-                      levels=c(plotTitleType, plotGriddedType, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), ordered=FALSE), 
+        Method=factor(rep(c(plotTitleType, plotTitleGridded, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), each=niter), 
+                      levels=c(plotTitleType, plotTitleGridded, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), ordered=FALSE), 
         MSE=c((thisCVs - trueMSEs)^2, 
               (thisGriddedCVs - trueMSEs)^2, 
               (thisISCVs - trueMSEs)^2, 
@@ -1976,8 +1976,8 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
                       (thisVCPR2CVs - thisVCPR2CVsWrong1 < 0) & (thisVCPR2CVs - thisVCPR2CVsWrong2 < 0)))
     } else {
       dat = data.frame(
-        Method=factor(rep(c(plotTitleType, plotGriddedType, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), each=niter), 
-                      levels=c(plotTitleType, plotGriddedType, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), ordered=FALSE), 
+        Method=factor(rep(c(plotTitleType, plotTitleGridded, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), each=niter), 
+                      levels=c(plotTitleType, plotTitleGridded, "IW", "IWP", "IWPR2", "VC", "VCR", "VCR2", "VCP", "VCPR", "VCPR2"), ordered=FALSE), 
         Probability=c((thisCVs - thisCVsWrong1 < 0) & (thisCVs - thisCVsWrong2 < 0), 
                       (thisGriddedCVs - thisCVsWrong1 < 0) & (thisGriddedCVs - thisCVsWrong2 < 0), 
                       (thisISCVs - thisISCVsWrong1 < 0) & (thisISCVs - thisISCVsWrong2 < 0), 

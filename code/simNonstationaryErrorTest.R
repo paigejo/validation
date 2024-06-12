@@ -1306,6 +1306,8 @@ getTransitionErrVar = function(propMount=.3,
     } else {
       out = load(paste0("savedOutput/griddedCVtestNonstatErr/nonStatScoresMat_oversampM", 
                         oversampleMountRatio, ".RData"))
+      # sigmaSqsM = sort(unique(sigmaSqsMat[,2]))
+      # sigmaSqsNM = sort(unique(sigmaSqsMat[,1]))
     }
     
     scoreDiffDat = nonStatDatScoresMat - scoreBestDat
@@ -1361,7 +1363,17 @@ getTransitionErrVar = function(propMount=.3,
     dev.off()
     
     if(oversampleMountRatio == "0.2") {
+      # select some comparison models. First get transect of preferences
+      transectI = which.min((sigmaSqsM - .1)^2)
+      print(sigmaSqsM[transectI]) # should be about .1
+      colI = which.min(abs(correctBiasIndexMat[,transectI]) - as.numeric(sigmaSqsNM > .1^2))
+      print(sigmaSqsNM[colI]) # about 0.035
+      print(sqrt(sigmaSqsNM[colI])) # about 0.188
+      sigmaSqMSims = rep(.1, 3)
+      sigmaSqPSims = c(.1^2, 0.035, .1)
+      
       browser()
+      cols = makeRedBlueDivergingColors(64, valRange=range(fullMat[,3]), center=0)
       pdf(paste0("figures/nonstatErrorIllustration/dist_simsScore", score, "_oversampM", oversampleMountRatio, ".pdf"), width=5.1, height=5)
       par(mar=c(2.8, 1.3, 2, 1), oma=c(0, 0, 0, 1.5), mgp=c(1.9,.7,0))
       plot(log10(fullMat[,1]), log10(fullMat[,2]), type="n", axes=FALSE, xlab="", ylab="",
@@ -1376,6 +1388,7 @@ getTransitionErrVar = function(propMount=.3,
       mtext(TeX("$\\sigma_{epsilon,Mount}^2"), side=2, line=-.1)
       mtext(TeX("$\\sigma_{epsilon,Plains}^2"), side=1, line=1.3)
       points(log10(c(sigmaSqBestDat, .01)), log10(c(sigmaSqBestDat, 1)), pch=19, col=c("purple", "green"))
+      points(log10(sigmaSqPSims), log10(sigmaSqMSims), pch="x")
       # myQuiltPlot(fullMat[,1], fullMat[,2], fullMat[,3], col=cols, 
       #            nx=500, ny=500, log="xy", asp=1, addColorBar=TRUE, 
       #            xlab=TeX("$\\sigma_{epsilon,Plains}^2"), ylab=TeX("$\\sigma_{epsilon,Mount}^2"), 
