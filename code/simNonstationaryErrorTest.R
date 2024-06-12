@@ -942,7 +942,6 @@ getNonstatErrECRPSpropGrid = function(n=50, nsim=100,
   }
   
   # plot results ----
-  browser()
   
   # return results ----
   out = list(trueECRPSMat=trueECRPSMat, 
