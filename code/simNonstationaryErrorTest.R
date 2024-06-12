@@ -741,7 +741,7 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
   trueMSE = expectedIntervalScore(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondB, est.var=varAcondB + sigmaEpsSqTrueLoc)
   wrongMSE1 = expectedIntervalScore(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong1, est.var=varAcondBWrong1 + sigmaEpsSqWrong1Loc)
   wrongMSE2 = expectedIntervalScore(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong2, est.var=varAcondBWrong2 + sigmaEpsSqWrong2Loc)
-  
+  browser()
   # trueCRPS = expectedCRPS(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondB, est.var=varAcondB + sigmaEpsSqTrueLoc)
   # wrongCRPS1 = expectedCRPS(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong1, est.var=varAcondBWrong1 + sigmaEpsSqWrong1Loc)
   # wrongCRPS2 = expectedCRPS(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong2, est.var=varAcondBWrong2 + sigmaEpsSqWrong2Loc)
@@ -1136,7 +1136,7 @@ getTransitionErrVar = function(propMount=.3,
   
   score = match.arg(score)
   
-  browser()
+  
   startTime = proc.time()[3]
   for(i in 1:length(oversampleMountRatioSeq)) {
     print(paste0("i=", i, "/", length(oversampleMountRatioSeq)))
@@ -1372,7 +1372,7 @@ getTransitionErrVar = function(propMount=.3,
       sigmaSqMSims = rep(.1, 3)
       sigmaSqPSims = c(.1^2, 0.035, .1)
       
-      browser()
+      
       cols = makeRedBlueDivergingColors(64, valRange=range(fullMat[,3]), center=0)
       pdf(paste0("figures/nonstatErrorIllustration/dist_simsScore", score, "_oversampM", oversampleMountRatio, ".pdf"), width=5.1, height=5)
       par(mar=c(2.8, 1.3, 2, 1), oma=c(0, 0, 0, 1.5), mgp=c(1.9,.7,0))
@@ -1588,6 +1588,65 @@ getTransitionErrVar = function(propMount=.3,
         #            xlab=TeX("$\\sigma_{epsilon,Plains}^2"), ylab=TeX("$\\sigma_{epsilon,Mount}^2"), 
         #            main="Correct model selected", legend.mar=0)
         dev.off()
+      }
+      
+      if(oversampleMountRatio == "0.2") {
+        
+        pdf(paste0("figures/nonstatErrorIllustration/modelSelectScoreIWvsLOOsims_Score", score, "_oversampM", oversampleMountRatio, "_n", thisN, ".pdf"), width=5.1, height=5)
+        par(mar=c(2.8, 1.3, 2, 1), oma=c(0, 0, 0, 1.5), mgp=c(1.9,.7,0))
+        plot(log10(fullMat[,1]), log10(fullMat[,2]), type="n", axes=FALSE, xlab="", ylab="",
+             main=TeX(paste0("IW-LOO selection score ($R_{oversamp}=", oversampleMountRatio, "$, $n=$", thisN, ")")), asp=1)
+        selectScoreDiff = selectScoreIW - selectScoreLOO
+        cols = makeRedBlueDivergingColors(64, valRange=range(selectScoreDiff), center=0)
+        myQuiltPlot(log10(fullMat[,1]), log10(fullMat[,2]), selectScoreDiff, col=cols,
+                    add=TRUE, nx=500, ny=500, legend.mar=1.8)
+        points(log10(sigmaSqPSims), log10(sigmaSqMSims), pch="x")
+        contour(log10(sigmaSqsNM), log10(sigmaSqsM), selectScoreDiff, col=rgb(.4,.4,.4), add=TRUE)
+        axis(1, at=seq(-4, 0, by=2), labels=c(".01^2", ".1^2", "1"), line=-.75)
+        axis(2, at=seq(-4, 0, by=2), labels=c(".01^2", ".1^2", "1"), line=-1.5)
+        mtext(TeX("$\\sigma_{epsilon,Mount}^2"), side=2, line=-.1)
+        mtext(TeX("$\\sigma_{epsilon,Plains}^2"), side=1, line=1.3)
+        points(log10(c(sigmaSqBestDat, .01)), log10(c(sigmaSqBestDat, 1)), pch=19, col=c("purple", "green"))
+        # myQuiltPlot(fullMat[,1], fullMat[,2], fullMat[,3], col=cols, 
+        #            nx=500, ny=500, log="xy", asp=1, addColorBar=TRUE, 
+        #            xlab=TeX("$\\sigma_{epsilon,Plains}^2"), ylab=TeX("$\\sigma_{epsilon,Mount}^2"), 
+        #            main="Correct model selected", legend.mar=0)
+        dev.off()
+        
+        # calculate select scores and difference in scores
+        transectI = which.min((sigmaSqsM - .1)^2)
+        sigmaSqMSims = rep(.1, 3)
+        sigmaSqPSims = c(.1^2, 0.035, .1)
+        colI1 = which.min(abs(sigmaSqsNM - sigmaSqPSims[1]))
+        colI2 = which.min(abs(sigmaSqsNM - sigmaSqPSims[2]))
+        colI3 = which.min(abs(sigmaSqsNM - sigmaSqPSims[3]))
+        colIs = c(colI1, colI2, colI3)
+        print(sigmaSqsNM[colIs]) # about 0.01, .035, .1
+        print(sqrt(sigmaSqsNM[colIs])) # about .100, 0.188, .317
+        
+        
+        print(paste("", round(selectScoreLOO[colIs, transectI], digits=3)))
+        # n=50:
+        # [1] " 0.457"  " 0.008"  " -0.134"
+        # n=500:
+        # [1] " 0.457"  " 0.026"  " -0.134"
+        # n=10000:
+        # " 0.457"  " 0.114"  " -0.134"
+        print(paste("", round(selectScoreIW[colIs, transectI], digits=3)))
+        # n=50:
+        # [1] " 0.457" " 0.359" " 0.086"
+        # n=500:
+        # " 0.457" " 0.364" " 0.134"
+        # n=10000:
+        # " 0.457" " 0.364" " 0.134"
+        print(paste("", round(selectScoreDiff[colIs, transectI], digits=3)))
+        # n=50:
+        # [1] " 0"     " 0.351" " 0.22" 
+        # n=500:
+        # [1] " 0"     " 0.337" " 0.268"
+        # n=10000:
+        # [1] " 0"     " 0.249" " 0.268"
+        browser()
       }
       
       thisCurrTime = proc.time()[3]
