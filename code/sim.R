@@ -1067,7 +1067,7 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
     varNames = paste("this", coreVarNames, "s", sep="")
     varNamesWrong1 = paste("this", coreVarNames, "sWrong1", sep="")
     varNamesWrong2 = paste("this", coreVarNames, "sWrong2", sep="")
-    browser()
+    
     for(i in 1:length(varNames)) {
       # get variables from the results
       if(thisType == "LOO") {
@@ -2088,8 +2088,6 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
     # geom_hline(yintercept=38)
     # dev.off()
     ggsave(paste0(figureFolder, type,  "_selProbErr12_n1", n, "_n2", n2, unifText, prefText, twoDatText, nonStatErrorText, "_niter", niter, ".pdf"), p, width=8, height=6)
-    
-    browser()
     
     # plot model selection score
     diffMSEs = wrongMSEs1 - wrongMSEs2
