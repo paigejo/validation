@@ -697,7 +697,7 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
     } else if(!nonStatError) {
       if(is.null(rGRFargsSample)) {
         rGRFargsSample = list(mu1=0, mu2=0, sigma1=1, sigma2=1, rho=rho, 
-                              cov.args=list(Covariance="Matern", range=0.2, smoothness=1.0), 
+                              cov.args=list(Covariance="Matern", range=0.2, smoothness=1.5), 
                               delta=3, sigmaEpsSq1=sigmaEpsSq, sigmaEpsSq2=sigmaEpsSq2, nx=nx, ny=ny)
       }
       

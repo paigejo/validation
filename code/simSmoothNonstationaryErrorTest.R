@@ -60,7 +60,7 @@ griddedResTestIterSmoothNonstatError = function(rGRFargsTruth=NULL, rGRFargsMoun
   # set default GRF parameters
   if(is.null(rGRFargsTruth)) {
     rGRFargsTruth = list(mu=0, sigma=1, 
-                         cov.args=list(Covariance="Matern", range=0.2, smoothness=0.5), 
+                         cov.args=list(Covariance="Matern", range=0.2, smoothness=1.5), 
                          delta=3, sigmaEpsSq=0, nx=nx, ny=ny)
   }
   if(is.null(rGRFargsWrong1)) {

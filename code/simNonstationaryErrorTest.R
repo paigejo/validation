@@ -784,7 +784,7 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
     # wrongCRPS2 = expectedCRPS(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong2, est.var=varAcondBWrong2 + sigmaEpsSqWrong2Loc)
   }
   
-  
+  browser()
   if(FALSE) {
     
     pdf("figures/nonstatErrorTest/test_Truth.pdf", width=5, height=5)
