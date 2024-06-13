@@ -44,6 +44,65 @@ r2GRFs = function(nx=100, ny=100, mu1=0, mu2=mu1, sigma1=1, sigma2=sigma1, rho=-
   list(Y1=Y1, Y2=Y2)
 }
 
+# Based on:
+# ANALYSIS OF CIRCULANT EMBEDDING METHODS FOR SAMPLING STATIONARY RANDOM FIELDS
+# by Graham et al
+# Takes in values of delta and Matérn parameters nu and nx for a given range. 
+# Returns a value of delta for the same range but new nu and nx that allows for 
+# psd embedding matrix in circulant embedding. Delta is from fields package's 
+# fields::circulantEmbedding function.
+estDeltaCirculantEmbedding = function(delta, nu, nx, newNu=nu, newNx=nx) {
+  currSize = 1 + sqrt(nu)*log(nx)
+  newSize = 1 + sqrt(newNu)*log(newNx)
+  (newSize/currSize) * delta
+}
+
+# downsample a simulated GRF on a grid by a factor given by subsample
+downsampleGridI = function(simGRF, subsample) {
+  locs=simGRF$locs
+  truth=simGRF$truth
+  obs=simGRF$obs
+  xs=simGRF$xs
+  ys=simGRF$ys
+  nx=simGRF$nx
+  ny=simGRF$ny
+  cov.args=simGRF$cov.args
+  mu=simGRF$mu
+  sigma=simGRF$sigma
+  pixelArea=simGRF$pixelArea
+  
+  
+  # make sure resolution is divisible by subsampling rate
+  if(nx != ny) {
+    stop("nx must equal ny")
+  }
+  if((ny %% subsample) != 0) {
+    stop(paste0("resolution ", ny, " not divisible by subsample rate ", subsample))
+  }
+  
+  # make sure subsampling rate is odd so subsamples are in center
+  if((subsample %% 2) == 0) {
+    stop(paste0("subsample rate ", subsample, " must be odd"))
+  }
+  
+  midPt = ceiling(subsample/2)
+  subsampleI = seq(midPt, nx, by=subsample)
+  subsampleAllI = c(outer(subsampleI, nx*(subsampleI-1), "+"))
+  
+  locsNew = locs[subsampleAllI,]
+  truthNew = truth[subsampleAllI]
+  obsNew = obs[subsampleAllI]
+  xsNew = xs[subsampleI]
+  ysNew = ys[subsampleI]
+  pixelAreaNew = pixelArea*(subsample^2)
+  nxNew = nx/subsample
+  nyNew = ny/subsample
+  newSimGRF = list(locs=locsNew, truth=truthNew, obs=obsNew, xs=xsNew, ys=ysNew, nx=nxNew, ny=nyNew, 
+                   cov.args=cov.args, mu=mu, sigma=sigma, pixelArea=pixelAreaNew)
+  
+  list(subsampleAllI=subsampleAllI, newSimGRF=newSimGRF)
+}
+
 # Use IWs:
 #   1/rateEsts from full dataset
 # Use control variates: 
@@ -652,7 +711,7 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
                              rGRFargsWrong2=NULL, rGRFargsMount=NULL, 
                              n=50, gridNs=2^(1:6), Ks=c(9, 25), niter=100, seed=123, 
                              twoDatasets=FALSE, nonStatError=FALSE, 
-                             nx=100, ny=100, sigmaEpsSq=ifelse(twoDatasets, .1^2, 0), sigmaEpsSq2=9*sigmaEpsSq, 
+                             nx=500, ny=nx, sigmaEpsSq=ifelse(twoDatasets, .1^2, 0), sigmaEpsSq2=9*sigmaEpsSq, 
                              rho=-.8, alpha=0, beta=1, n2=n, 
                              sigmaEpsSqNonMount=.1^2, sigmaEpsSqMount=1^2, 
                              sigmaEpsSqNonMountWrong1=.1^2, sigmaEpsSqMountWrong1=.1^2, 
@@ -660,7 +719,7 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
                              propMount=.3, oversampleMountRatio=1/5, regenResults=TRUE, 
                              printProgress=FALSE, relTicks1=NULL, relTickLabs1=NULL, 
                              relTicks2=NULL, relTickLabs2=NULL, unif=FALSE, 
-                             preferential=FALSE, saveResults=TRUE, subsample=1) {
+                             preferential=FALSE, saveResults=TRUE, subsample=nx/100) {
   set.seed(seed)
   seeds = sample(1:100000, niter)
   
@@ -697,8 +756,8 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
     } else if(!nonStatError) {
       if(is.null(rGRFargsSample)) {
         rGRFargsSample = list(mu1=0, mu2=0, sigma1=1, sigma2=1, rho=rho, 
-                              cov.args=list(Covariance="Matern", range=0.2, smoothness=1.5), 
-                              delta=3, sigmaEpsSq1=sigmaEpsSq, sigmaEpsSq2=sigmaEpsSq2, nx=nx, ny=ny)
+                              cov.args=list(Covariance="Matern", range=0.1, smoothness=1.5), 
+                              delta=10, sigmaEpsSq1=sigmaEpsSq, sigmaEpsSq2=sigmaEpsSq2, nx=nx, ny=ny)
       }
       
       totTime = system.time(results <- lapply(1:niter, griddedResTestIter2Datasets, 

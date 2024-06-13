@@ -22,11 +22,11 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
                                           propMount=.3, oversampleMountRatio=1/5, 
                                           n1=50, gridNs=2^(1:6), Ks=c(9, 25), iter=1, 
                                           rGRFargsWrong1=NULL, rGRFargsWrong2=NULL, 
-                                          nx=100, ny=100, sigmaEpsSqNonMount=.1^2, sigmaEpsSqMount=1^2, 
+                                          nx=500, ny=nx, sigmaEpsSqNonMount=.1^2, sigmaEpsSqMount=1^2, 
                                           sigmaEpsSqNonMountWrong1=.1^2, sigmaEpsSqMountWrong1=.1^2, 
                                           sigmaEpsSqNonMountWrong2=.1, sigmaEpsSqMountWrong2=.1, 
                                           allSeeds=123, printProgress=FALSE, printPhat=FALSE, 
-                                          saveResults=TRUE, subsample=1) {
+                                          saveResults=TRUE, subsample=nx/100) {
   
   if(iter > 1) {
     currT = proc.time()[3]
@@ -53,7 +53,6 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
     }
   }
   
-  
   if(!is.null(allSeeds)) {
     set.seed(allSeeds[iter])
   }
@@ -61,8 +60,8 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
   # set default GRF parameters
   if(is.null(rGRFargsTruth)) {
     rGRFargsTruth = list(mu=0, sigma=1, 
-                         cov.args=list(Covariance="Matern", range=0.2, smoothness=0.5), 
-                         delta=3, sigmaEpsSq=0, nx=nx, ny=ny)
+                         cov.args=list(Covariance="Matern", range=0.1, smoothness=1.5), 
+                         delta=10, sigmaEpsSq=0, nx=nx, ny=ny)
   }
   if(is.null(rGRFargsWrong1)) {
     rGRFargsWrong1 = rGRFargsTruth
@@ -82,11 +81,24 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
   truth = truthGRF$truth
   locs = truthGRF$locs
   
+  if(!is.null(subsample)) {
+    truthGRF = downsampleGridI(truthGRF, subsample)$newSimGRF
+    locsSub = truthGRF$locs
+    truthSub = truthGRF$truth
+  }
+  
   # 2.5. Simulate 1 GRF for mountains ----
   #    on unit square
   mountGRF = do.call("rGRF", rGRFargsMount)
   mountCov = mountGRF$truth
   isMount = mountCov > quantile(mountCov, .7, type=1) # exactly 30% of domain is mountainous
+  
+  if(!is.null(subsample)) {
+    mountGRF = downsampleGridI(mountGRF, subsample)$newSimGRF
+    mountCov = mountGRF$truth
+    isMountSub = mountCov > quantile(mountCov, .7, type=1)
+  }
+  
   
   # 3. Simulate sample distribution ----
   #    on mountainous and non-mountainous part of domain
@@ -123,6 +135,14 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
   sigmaEpsSqWrong2 = c(rep(sigmaEpsSqMountWrong2, nMount), rep(sigmaEpsSqNonMountWrong2, nNonMount))
   sigmaEpsSqTrue = c(rep(sigmaEpsSqMount, nMount), rep(sigmaEpsSqNonMount, nNonMount))
   
+  if(!is.null(subsample)) {
+    # now that we've simulated the data, we don't need the super high resolution 
+    # GRF samples anymore
+    locs = locsSub
+    truth = truthSub
+    mountCov = mountCovSub
+  }
+  
   sigmaEpsSqTrueLoc = rep(sigmaEpsSqNonMount, nrow(locs))
   sigmaEpsSqTrueLoc[isMount] = sigmaEpsSqMount
   sigmaEpsSqWrong1Loc = rep(sigmaEpsSqNonMountWrong1, nrow(locs))
@@ -157,12 +177,13 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
   SigmaSample = SigmaSample + diag(sigmaEpsSqTrue)
   SigmaSampleWrong1 = SigmaSampleWrong1 + diag(sigmaEpsSqWrong1)
   SigmaSampleWrong2 = SigmaSampleWrong2 + diag(sigmaEpsSqWrong2)
+  
   distLocsToXs = rdist(locs, xs)
   distLocsToSample = distLocsToXs
   SigmaGridToSample = stationary.cov(locs, xs, Covariance="Matern", aRange=rGRFargsTruth$cov.args$range, 
                                      smoothness=rGRFargsTruth$cov.args$smoothness, distMat=distLocsToSample) * rGRFargsTruth$sigma^2
   SigmaGridToSampleWrong1 = stationary.cov(locs, xs, Covariance="Matern", aRange=rGRFargsWrong1$cov.args$range, 
-                                          smoothness=rGRFargsWrong1$cov.args$smoothness, distMat=distLocsToSample) * rGRFargsWrong1$sigma^2
+                                           smoothness=rGRFargsWrong1$cov.args$smoothness, distMat=distLocsToSample) * rGRFargsWrong1$sigma^2
   SigmaGridToSampleWrong2 = stationary.cov(locs, xs, Covariance="Matern", aRange=rGRFargsWrong2$cov.args$range, 
                                            smoothness=rGRFargsWrong2$cov.args$smoothness, distMat=distLocsToSample) * rGRFargsWrong2$sigma^2
   
@@ -722,103 +743,62 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
   }
   
   # 12. Calculate true model Scores ----
-  browser()
-  if(subsample == 1) {
-    condDistn = condMeanMVN(SigmaAA=rep(rGRFargsTruth$sigma^2, nrow(locs)), SigmaAB=SigmaGridToSample, SigmaBB=SigmaSample, 
-                            ysB=ys, getFullCov=FALSE, getCondVar=TRUE)
-    muAcondB = condDistn$muAcondB
-    varAcondB = condDistn$varAcondB
-    condDistn = condMeanMVN(SigmaAA=rep(rGRFargsWrong1$sigma^2, nrow(locs)), SigmaAB=SigmaGridToSampleWrong1, SigmaBB=SigmaSampleWrong1, 
-                            ysB=ys, getFullCov=FALSE, getCondVar=TRUE)
-    muAcondBWrong1 = condDistn$muAcondB
-    varAcondBWrong1 = condDistn$varAcondB
-    condDistn = condMeanMVN(SigmaAA=rep(rGRFargsWrong2$sigma^2, nrow(locs)), SigmaAB=SigmaGridToSampleWrong2, SigmaBB=SigmaSampleWrong2, 
-                            ysB=ys, getFullCov=FALSE, getCondVar=TRUE)
-    muAcondBWrong2 = condDistn$muAcondB
-    varAcondBWrong2 = condDistn$varAcondB
-    
-    # calculate Scores for the grid cells (called MSE for historical reasons...)
-    # trueMSE = mean((truth - muAcondB)^2) + sigmaEpsSq1
-    # wrongMSE = mean((truth - muAcondBwrong)^2) + sigmaEpsSq1 # add sigmaEpsSq1, the true error variance, not sigmaEpsSq2
-    
-    trueMSE = expectedIntervalScore(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondB, est.var=varAcondB + sigmaEpsSqTrueLoc)
-    wrongMSE1 = expectedIntervalScore(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong1, est.var=varAcondBWrong1 + sigmaEpsSqWrong1Loc)
-    wrongMSE2 = expectedIntervalScore(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong2, est.var=varAcondBWrong2 + sigmaEpsSqWrong2Loc)
-    
-    # trueCRPS = expectedCRPS(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondB, est.var=varAcondB + sigmaEpsSqTrueLoc)
-    # wrongCRPS1 = expectedCRPS(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong1, est.var=varAcondBWrong1 + sigmaEpsSqWrong1Loc)
-    # wrongCRPS2 = expectedCRPS(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong2, est.var=varAcondBWrong2 + sigmaEpsSqWrong2Loc)
-  } else {
-    # keep only every subsample locations on grid
-    subsampleI = seq(1, nrow(locs), by=subsample)
-    locsSub = locs[subsampleI,]
-    truthSub = truth[subsampleI,]
-    SigmaGridToSampleSub = SigmaGridToSample[subsampleI,]
-    SigmaGridToSampleWrong1Sub = SigmaGridToSampleWrong1[subsampleI,]
-    SigmaGridToSampleWrong2Sub = SigmaGridToSampleWrong2[subsampleI,]
-    sigmaEpsSqTrueLocSub = sigmaEpsSqTrueLoc[subsampleI]
-    
-    condDistn = condMeanMVN(SigmaAA=rep(rGRFargsTruth$sigma^2, nrow(locsSub)), SigmaAB=SigmaGridToSampleSub, SigmaBB=SigmaSample, 
-                            ysB=ys, getFullCov=FALSE, getCondVar=TRUE)
-    muAcondB = condDistn$muAcondB
-    varAcondB = condDistn$varAcondB
-    condDistn = condMeanMVN(SigmaAA=rep(rGRFargsWrong1$sigma^2, nrow(locsSub)), SigmaAB=SigmaGridToSampleWrong1Sub, SigmaBB=SigmaSampleWrong1, 
-                            ysB=ys, getFullCov=FALSE, getCondVar=TRUE)
-    muAcondBWrong1 = condDistn$muAcondB
-    varAcondBWrong1 = condDistn$varAcondB
-    condDistn = condMeanMVN(SigmaAA=rep(rGRFargsWrong2$sigma^2, nrow(locsSub)), SigmaAB=SigmaGridToSampleWrong2Sub, SigmaBB=SigmaSampleWrong2, 
-                            ysB=ys, getFullCov=FALSE, getCondVar=TRUE)
-    muAcondBWrong2 = condDistn$muAcondB
-    varAcondBWrong2 = condDistn$varAcondB
-    
-    # calculate Scores for the grid cells (called MSE for historical reasons...)
-    # trueMSE = mean((truth - muAcondB)^2) + sigmaEpsSq1
-    # wrongMSE = mean((truth - muAcondBwrong)^2) + sigmaEpsSq1 # add sigmaEpsSq1, the true error variance, not sigmaEpsSq2
-    
-    trueMSE = expectedIntervalScore(truth=truthSub, truth.var=sigmaEpsSqTrueLocSub, est=muAcondB, est.var=varAcondB + sigmaEpsSqTrueLoc)
-    wrongMSE1 = expectedIntervalScore(truth=truthSub, truth.var=sigmaEpsSqTrueLocSub, est=muAcondBWrong1, est.var=varAcondBWrong1 + sigmaEpsSqWrong1Loc)
-    wrongMSE2 = expectedIntervalScore(truth=truthSub, truth.var=sigmaEpsSqTrueLocSub, est=muAcondBWrong2, est.var=varAcondBWrong2 + sigmaEpsSqWrong2Loc)
-    
-    # trueCRPS = expectedCRPS(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondB, est.var=varAcondB + sigmaEpsSqTrueLoc)
-    # wrongCRPS1 = expectedCRPS(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong1, est.var=varAcondBWrong1 + sigmaEpsSqWrong1Loc)
-    # wrongCRPS2 = expectedCRPS(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong2, est.var=varAcondBWrong2 + sigmaEpsSqWrong2Loc)
-  }
+  condDistn = condMeanMVN(SigmaAA=rep(rGRFargsTruth$sigma^2, nrow(locs)), SigmaAB=SigmaGridToSample, SigmaBB=SigmaSample, 
+                          ysB=ys, getFullCov=FALSE, getCondVar=TRUE)
+  muAcondB = condDistn$muAcondB
+  varAcondB = condDistn$varAcondB
+  condDistn = condMeanMVN(SigmaAA=rep(rGRFargsWrong1$sigma^2, nrow(locs)), SigmaAB=SigmaGridToSampleWrong1, SigmaBB=SigmaSampleWrong1, 
+                          ysB=ys, getFullCov=FALSE, getCondVar=TRUE)
+  muAcondBWrong1 = condDistn$muAcondB
+  varAcondBWrong1 = condDistn$varAcondB
+  condDistn = condMeanMVN(SigmaAA=rep(rGRFargsWrong2$sigma^2, nrow(locs)), SigmaAB=SigmaGridToSampleWrong2, SigmaBB=SigmaSampleWrong2, 
+                          ysB=ys, getFullCov=FALSE, getCondVar=TRUE)
+  muAcondBWrong2 = condDistn$muAcondB
+  varAcondBWrong2 = condDistn$varAcondB
   
-  browser()
+  # calculate Scores for the grid cells (called MSE for historical reasons...)
+  # trueMSE = mean((truth - muAcondB)^2) + sigmaEpsSq1
+  # wrongMSE = mean((truth - muAcondBwrong)^2) + sigmaEpsSq1 # add sigmaEpsSq1, the true error variance, not sigmaEpsSq2
+  
+  trueMSE = expectedIntervalScore(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondB, est.var=varAcondB + sigmaEpsSqTrueLoc)
+  wrongMSE1 = expectedIntervalScore(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong1, est.var=varAcondBWrong1 + sigmaEpsSqWrong1Loc)
+  wrongMSE2 = expectedIntervalScore(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong2, est.var=varAcondBWrong2 + sigmaEpsSqWrong2Loc)
+  
+  # trueCRPS = expectedCRPS(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondB, est.var=varAcondB + sigmaEpsSqTrueLoc)
+  # wrongCRPS1 = expectedCRPS(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong1, est.var=varAcondBWrong1 + sigmaEpsSqWrong1Loc)
+  # wrongCRPS2 = expectedCRPS(truth=truth, truth.var=sigmaEpsSqTrueLoc, est=muAcondBWrong2, est.var=varAcondBWrong2 + sigmaEpsSqWrong2Loc)
+  
   if(FALSE) {
     
     pdf("figures/nonstatErrorTest/test_Truth.pdf", width=5, height=5)
     plotWithColor(locs[,1], locs[,2], truth, cex=.2, pch=19)
     dev.off()
-    
     pdf("figures/nonstatErrorTest/test_Mount.pdf", width=5, height=5)
     plotWithColor(locs[,1], locs[,2], isMount, cex=.2, pch=19, colScale=c("green", "brown"))
     dev.off()
-    
     pdf("figures/nonstatErrorTest/test_dat.pdf", width=5, height=5)
     plotWithColor(xs[,1], xs[,2], ys, cex=.1, pch=19)
     dev.off()
-    
     pdf("figures/nonstatErrorTest/test_TruePreds.pdf", width=5, height=5)
     plotWithColor(locs[,1], locs[,2], muAcondB, cex=.2, pch=19)
     dev.off()
-    
     pdf("figures/nonstatErrorTest/test_TrueResids.pdf", width=5, height=5)
     plotWithColor(locs[,1], locs[,2], truth-muAcondB, cex=.2, pch=19)
     dev.off()
-    
+    diffs = c(0,diff(truth))
+    cols = makeRedBlueDivergingColors(64, range(diffs), center=0)
+    pdf("figures/nonstatErrorTest/test_TrueDiffs.pdf", width=5, height=5)
+    plotWithColor(locs[,1], locs[,2], diffs, cex=.2, pch=19, colScale=cols)
+    dev.off()
     pdf("figures/nonstatErrorTest/test_Wrong1Preds.pdf", width=5, height=5)
     plotWithColor(locs[,1], locs[,2], muAcondBWrong1, cex=.2, pch=19)
     dev.off()
-    
     pdf("figures/nonstatErrorTest/test_Wrong1Resids.pdf", width=5, height=5)
     plotWithColor(locs[,1], locs[,2], truth-muAcondBWrong1, cex=.2, pch=19)
     dev.off()
-    
     pdf("figures/nonstatErrorTest/test_Wrong2Preds.pdf", width=5, height=5)
     plotWithColor(locs[,1], locs[,2], muAcondBWrong2, cex=.2, pch=19)
     dev.off()
-    
     pdf("figures/nonstatErrorTest/test_Wrong2Resids.pdf", width=5, height=5)
     plotWithColor(locs[,1], locs[,2], truth-muAcondBWrong2, cex=.2, pch=19)
     dev.off()
@@ -1099,14 +1079,26 @@ getNonstatErrECRPS = function(n=50, nsim=100,
     SigmaSample = SigmaSample + diag(sigmaEpsSqTrue)
     SigmaSampleWrong1 = SigmaSampleWrong1 + diag(sigmaEpsSqWrong1)
     SigmaSampleWrong2 = SigmaSampleWrong2 + diag(sigmaEpsSqWrong2)
-    distLocsToXs = rdist(locs, xs)
-    distLocsToSample = distLocsToXs
-    SigmaGridToSample = stationary.cov(locs, xs, Covariance="Matern", aRange=rGRFargsTruth$cov.args$range, 
-                                       smoothness=rGRFargsTruth$cov.args$smoothness, distMat=distLocsToSample) * rGRFargsTruth$sigma^2
-    SigmaGridToSampleWrong1 = stationary.cov(locs, xs, Covariance="Matern", aRange=rGRFargsWrong1$cov.args$range, 
-                                             smoothness=rGRFargsWrong1$cov.args$smoothness, distMat=distLocsToSample) * rGRFargsWrong1$sigma^2
-    SigmaGridToSampleWrong2 = stationary.cov(locs, xs, Covariance="Matern", aRange=rGRFargsWrong2$cov.args$range, 
-                                             smoothness=rGRFargsWrong2$cov.args$smoothness, distMat=distLocsToSample) * rGRFargsWrong2$sigma^2
+    
+    if(subsample == 1) {
+      distLocsToXs = rdist(locs, xs)
+      distLocsToSample = distLocsToXs
+      SigmaGridToSample = stationary.cov(locs, xs, Covariance="Matern", aRange=rGRFargsTruth$cov.args$range, 
+                                         smoothness=rGRFargsTruth$cov.args$smoothness, distMat=distLocsToSample) * rGRFargsTruth$sigma^2
+      SigmaGridToSampleWrong1 = stationary.cov(locs, xs, Covariance="Matern", aRange=rGRFargsWrong1$cov.args$range, 
+                                               smoothness=rGRFargsWrong1$cov.args$smoothness, distMat=distLocsToSample) * rGRFargsWrong1$sigma^2
+      SigmaGridToSampleWrong2 = stationary.cov(locs, xs, Covariance="Matern", aRange=rGRFargsWrong2$cov.args$range, 
+                                               smoothness=rGRFargsWrong2$cov.args$smoothness, distMat=distLocsToSample) * rGRFargsWrong2$sigma^2
+    } else {
+      distLocsToXs = rdist(locsSub, xs)
+      distLocsToSample = distLocsToXs
+      SigmaGridToSample = stationary.cov(locsSub, xs, Covariance="Matern", aRange=rGRFargsTruth$cov.args$range, 
+                                         smoothness=rGRFargsTruth$cov.args$smoothness, distMat=distLocsToSample) * rGRFargsTruth$sigma^2
+      SigmaGridToSampleWrong1 = stationary.cov(locsSub, xs, Covariance="Matern", aRange=rGRFargsWrong1$cov.args$range, 
+                                               smoothness=rGRFargsWrong1$cov.args$smoothness, distMat=distLocsToSample) * rGRFargsWrong1$sigma^2
+      SigmaGridToSampleWrong2 = stationary.cov(locsSub, xs, Covariance="Matern", aRange=rGRFargsWrong2$cov.args$range, 
+                                               smoothness=rGRFargsWrong2$cov.args$smoothness, distMat=distLocsToSample) * rGRFargsWrong2$sigma^2
+    }
     
     # 12. Calculate true model Scores ----
     condDistn = condMeanMVN(SigmaAA=rep(rGRFargsTruth$sigma^2, nrow(locs)), SigmaAB=SigmaGridToSample, SigmaBB=SigmaSample, 
