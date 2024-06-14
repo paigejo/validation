@@ -719,9 +719,20 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
                              propMount=.3, oversampleMountRatio=1/5, regenResults=TRUE, 
                              printProgress=FALSE, relTicks1=NULL, relTickLabs1=NULL, 
                              relTicks2=NULL, relTickLabs2=NULL, unif=FALSE, 
-                             preferential=FALSE, saveResults=TRUE, subsample=nx/100) {
+                             preferential=FALSE, saveResults=TRUE, subsample=nx/100, 
+                             simI=NULL) {
   set.seed(seed)
   seeds = sample(1:100000, niter)
+  
+  if(!is.null(simI)) {
+    sigmaSqMSims = rep(1, 4)
+    sigmaSqPSims = c(.1^2, 0.0638284, .25, .8)
+    sigmaSqBestDat = 0.01315562
+    sigmaEpsSqNonMountWrong1 = sigmaSqBestDat
+    sigmaEpsSqMountWrong1 = sigmaSqBestDat
+    sigmaEpsSqNonMountWrong2 = sigmaSqPSims[simI]
+    sigmaEpsSqMountWrong2 = sigmaSqMSims[simI]
+  }
   
   if(twoDatasets) {
     unif=FALSE
@@ -757,7 +768,7 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
       if(is.null(rGRFargsSample)) {
         rGRFargsSample = list(mu1=0, mu2=0, sigma1=1, sigma2=1, rho=rho, 
                               cov.args=list(Covariance="Matern", range=0.1, smoothness=1.5), 
-                              delta=10, sigmaEpsSq1=sigmaEpsSq, sigmaEpsSq2=sigmaEpsSq2, nx=nx, ny=ny)
+                              delta=2.75, sigmaEpsSq1=sigmaEpsSq, sigmaEpsSq2=sigmaEpsSq2, nx=nx, ny=ny)
       }
       
       totTime = system.time(results <- lapply(1:niter, griddedResTestIter2Datasets, 

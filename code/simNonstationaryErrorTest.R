@@ -61,7 +61,7 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
   if(is.null(rGRFargsTruth)) {
     rGRFargsTruth = list(mu=0, sigma=1, 
                          cov.args=list(Covariance="Matern", range=0.1, smoothness=1.5), 
-                         delta=10, sigmaEpsSq=0, nx=nx, ny=ny)
+                         delta=2.75, sigmaEpsSq=0, nx=nx, ny=ny)
   }
   if(is.null(rGRFargsWrong1)) {
     rGRFargsWrong1 = rGRFargsTruth
@@ -1403,13 +1403,21 @@ getTransitionErrVar = function(propMount=.3,
     
     if(oversampleMountRatio == "0.2") {
       # select some comparison models. First get transect of preferences
-      transectI = which.min((sigmaSqsM - .1)^2)
-      print(sigmaSqsM[transectI]) # should be about .1
+      # transectI = which.min((sigmaSqsM - .1)^2)
+      # print(sigmaSqsM[transectI]) # should be about .1
+      # colI = which.min(abs(correctBiasIndexMat[,transectI]) - as.numeric(sigmaSqsNM > .1^2))
+      # print(sigmaSqsNM[colI]) # about 0.035
+      # print(sqrt(sigmaSqsNM[colI])) # about 0.188
+      # sigmaSqMSims = rep(.1, 3)
+      # sigmaSqPSims = c(.1^2, 0.035, .1)
+      
+      transectI = which.min((sigmaSqsM - 1)^2)
+      print(sigmaSqsM[transectI]) # should be about 1
       colI = which.min(abs(correctBiasIndexMat[,transectI]) - as.numeric(sigmaSqsNM > .1^2))
-      print(sigmaSqsNM[colI]) # about 0.035
-      print(sqrt(sigmaSqsNM[colI])) # about 0.188
-      sigmaSqMSims = rep(.1, 3)
-      sigmaSqPSims = c(.1^2, 0.035, .1)
+      print(sigmaSqsNM[colI]) # about 0.0638284
+      print(sqrt(sigmaSqsNM[colI])) # about 0.2526428
+      sigmaSqMSims = rep(1, 4)
+      sigmaSqPSims = c(.1^2, 0.0638284, .25, .8)
       
       
       cols = makeRedBlueDivergingColors(64, valRange=range(fullMat[,3]), center=0)
@@ -1630,7 +1638,6 @@ getTransitionErrVar = function(propMount=.3,
       }
       
       if(oversampleMountRatio == "0.2") {
-        
         pdf(paste0("figures/nonstatErrorIllustration/modelSelectScoreIWvsLOOsims_Score", score, "_oversampM", oversampleMountRatio, "_n", thisN, ".pdf"), width=5.1, height=5)
         par(mar=c(2.8, 1.3, 2, 1), oma=c(0, 0, 0, 1.5), mgp=c(1.9,.7,0))
         plot(log10(fullMat[,1]), log10(fullMat[,2]), type="n", axes=FALSE, xlab="", ylab="",
@@ -1639,13 +1646,13 @@ getTransitionErrVar = function(propMount=.3,
         cols = makeRedBlueDivergingColors(64, valRange=range(selectScoreDiff), center=0)
         myQuiltPlot(log10(fullMat[,1]), log10(fullMat[,2]), selectScoreDiff, col=cols,
                     add=TRUE, nx=500, ny=500, legend.mar=1.8)
-        points(log10(sigmaSqPSims), log10(sigmaSqMSims), pch="x")
         contour(log10(sigmaSqsNM), log10(sigmaSqsM), selectScoreDiff, col=rgb(.4,.4,.4), add=TRUE)
         axis(1, at=seq(-4, 0, by=2), labels=c(".01^2", ".1^2", "1"), line=-.75)
         axis(2, at=seq(-4, 0, by=2), labels=c(".01^2", ".1^2", "1"), line=-1.5)
         mtext(TeX("$\\sigma_{epsilon,Mount}^2"), side=2, line=-.1)
         mtext(TeX("$\\sigma_{epsilon,Plains}^2"), side=1, line=1.3)
         points(log10(c(sigmaSqBestDat, .01)), log10(c(sigmaSqBestDat, 1)), pch=19, col=c("purple", "green"))
+        points(log10(sigmaSqPSims), log10(sigmaSqMSims), pch="x")
         # myQuiltPlot(fullMat[,1], fullMat[,2], fullMat[,3], col=cols, 
         #            nx=500, ny=500, log="xy", asp=1, addColorBar=TRUE, 
         #            xlab=TeX("$\\sigma_{epsilon,Plains}^2"), ylab=TeX("$\\sigma_{epsilon,Mount}^2"), 
@@ -1653,38 +1660,65 @@ getTransitionErrVar = function(propMount=.3,
         dev.off()
         
         # calculate select scores and difference in scores
-        transectI = which.min((sigmaSqsM - .1)^2)
-        sigmaSqMSims = rep(.1, 3)
-        sigmaSqPSims = c(.1^2, 0.035, .1)
+        transectI = which.min((sigmaSqsM - 1)^2)
+        sigmaSqMSims = rep(1, 4)
+        sigmaSqPSims = c(.1^2, 0.0638284, .25, .8)
         colI1 = which.min(abs(sigmaSqsNM - sigmaSqPSims[1]))
         colI2 = which.min(abs(sigmaSqsNM - sigmaSqPSims[2]))
         colI3 = which.min(abs(sigmaSqsNM - sigmaSqPSims[3]))
-        colIs = c(colI1, colI2, colI3)
+        colI4 = which.min(abs(sigmaSqsNM - sigmaSqPSims[4]))
+        colIs = c(colI1, colI2, colI3, colI4)
         print(sigmaSqsNM[colIs]) # about 0.01, .035, .1
         print(sqrt(sigmaSqsNM[colIs])) # about .100, 0.188, .317
         
+        # old results:
+        # print(paste("", round(selectScoreLOO[colIs, transectI], digits=3)))
+        # # n=50:
+        # # [1] " 0.457"  " 0.008"  " -0.134"
+        # # n=500:
+        # # [1] " 0.457"  " 0.026"  " -0.134"
+        # # n=10000:
+        # # " 0.457"  " 0.114"  " -0.134"
+        # print(paste("", round(selectScoreIW[colIs, transectI], digits=3)))
+        # # n=50:
+        # # [1] " 0.457" " 0.359" " 0.086"
+        # # n=500:
+        # # " 0.457" " 0.364" " 0.134"
+        # # n=10000:
+        # # " 0.457" " 0.364" " 0.134"
+        # print(paste("", round(selectScoreDiff[colIs, transectI], digits=3)))
+        # # n=50:
+        # # [1] " 0"     " 0.351" " 0.22" 
+        # # n=500:
+        # # [1] " 0"     " 0.337" " 0.268"
+        # # n=10000:
+        # # [1] " 0"     " 0.249" " 0.268"
         
+        # new results
         print(paste("", round(selectScoreLOO[colIs, transectI], digits=3)))
         # n=50:
-        # [1] " 0.457"  " 0.008"  " -0.134"
+        # " 0.916"  " -0.005" " -0.368" " 0.344" 
         # n=500:
-        # [1] " 0.457"  " 0.026"  " -0.134"
+        # " 1.018"  " -0.017" " -0.368" " 0.344" 
         # n=10000:
-        # " 0.457"  " 0.114"  " -0.134"
+        # " 1.018"  " -0.076" " -0.368" " 0.344" 
         print(paste("", round(selectScoreIW[colIs, transectI], digits=3)))
         # n=50:
-        # [1] " 0.457" " 0.359" " 0.086"
+        # " 0.911" " 0.65"  " 0.162" " 0.143"
         # n=500:
-        # " 0.457" " 0.364" " 0.134"
+        # " 1.018" " 0.81"  " 0.344" " 0.315"
         # n=10000:
-        # " 0.457" " 0.364" " 0.134"
+        # " 1.018" " 0.81"  " 0.368" " 0.344"
         print(paste("", round(selectScoreDiff[colIs, transectI], digits=3)))
         # n=50:
-        # [1] " 0"     " 0.351" " 0.22" 
+        # " -0.005" " 0.655"  " 0.53"   " -0.201"
         # n=500:
-        # [1] " 0"     " 0.337" " 0.268"
+        # " 0"      " 0.827"  " 0.712"  " -0.029"
         # n=10000:
-        # [1] " 0"     " 0.249" " 0.268"
+        # " 0"     " 0.885" " 0.735" " 0"  
+        print(sigmaSqBestDat)
+        # 0.01315562
+        
         browser()
       }
       
