@@ -81,24 +81,11 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
   truth = truthGRF$truth
   locs = truthGRF$locs
   
-  if(!is.null(subsample)) {
-    truthGRF = downsampleGridI(truthGRF, subsample)$newSimGRF
-    locsSub = truthGRF$locs
-    truthSub = truthGRF$truth
-  }
-  
   # 2.5. Simulate 1 GRF for mountains ----
   #    on unit square
   mountGRF = do.call("rGRF", rGRFargsMount)
   mountCov = mountGRF$truth
   isMount = mountCov > quantile(mountCov, .7, type=1) # exactly 30% of domain is mountainous
-  
-  if(!is.null(subsample)) {
-    mountGRF = downsampleGridI(mountGRF, subsample)$newSimGRF
-    mountCov = mountGRF$truth
-    isMountSub = mountCov > quantile(mountCov, .7, type=1)
-  }
-  
   
   # 3. Simulate sample distribution ----
   #    on mountainous and non-mountainous part of domain
@@ -137,10 +124,28 @@ griddedResTestIterNonstatError = function(rGRFargsTruth=NULL, rGRFargsMount=NULL
   
   if(!is.null(subsample)) {
     # now that we've simulated the data, we don't need the super high resolution 
-    # GRF samples anymore
-    locs = locsSub
-    truth = truthSub
-    mountCov = mountCovSub
+    # GRF samples anymore.
+    truthGRF = downsampleGridI(truthGRF, subsample)$newSimGRF
+    locs = truthGRF$locs
+    truth = truthGRF$truth
+    
+    mountGRF = downsampleGridI(mountGRF, subsample)$newSimGRF
+    mountCov = mountGRF$truth
+    isMount = mountCov > quantile(mountCov, .7, type=1)
+    
+    # don't change nx, ny, since we need the sampling rate in the original fine
+    # resolution grid 
+    # nx = nx/subsample
+    # ny = ny/subsample
+    
+    # Variables at high resolution still:
+    #   sampleI   (indices are indices in high res grid)
+    #   sampleIMount   (indices are indices in high res grid)
+    #   sampleINonMount   (indices are indices in high res grid)
+    #   sampleRates
+    #   sampleProbs
+    #   sampleProbsNonMount
+    #   sampleProbsMount
   }
   
   sigmaEpsSqTrueLoc = rep(sigmaEpsSqNonMount, nrow(locs))
