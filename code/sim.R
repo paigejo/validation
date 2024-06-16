@@ -734,7 +734,7 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
       sigmaEpsSqNonMountWrong2 = sigmaSqPSims[simI]
       sigmaEpsSqMountWrong2 = sigmaSqMSims[simI]
     } else {
-      sigmaEpsSqNonMountWrong2 = .08
+      sigmaEpsSqNonMountWrong2 = .07
       sigmaEpsSqMountWrong2 = 1
     }
   }
