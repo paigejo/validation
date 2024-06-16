@@ -730,8 +730,13 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
     sigmaSqBestDat = 0.01315562
     sigmaEpsSqNonMountWrong1 = sigmaSqBestDat
     sigmaEpsSqMountWrong1 = sigmaSqBestDat
-    sigmaEpsSqNonMountWrong2 = sigmaSqPSims[simI]
-    sigmaEpsSqMountWrong2 = sigmaSqMSims[simI]
+    if(simI < 5) {
+      sigmaEpsSqNonMountWrong2 = sigmaSqPSims[simI]
+      sigmaEpsSqMountWrong2 = sigmaSqMSims[simI]
+    } else {
+      sigmaEpsSqNonMountWrong2 = .08
+      sigmaEpsSqMountWrong2 = sigmaSqMSims[simI]
+    }
   }
   
   if(twoDatasets) {
