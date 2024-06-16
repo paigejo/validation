@@ -711,7 +711,7 @@ griddedResTestAll = function(rGRFargsTruth=NULL, rGRFargsSample=NULL, rGRFargsWr
                              rGRFargsWrong2=NULL, rGRFargsMount=NULL, 
                              n=50, gridNs=2^(1:6), Ks=c(9, 25), niter=100, seed=123, 
                              twoDatasets=FALSE, nonStatError=FALSE, 
-                             nx=500, ny=nx, sigmaEpsSq=ifelse(twoDatasets, .1^2, 0), sigmaEpsSq2=9*sigmaEpsSq, 
+                             nx=300, ny=nx, sigmaEpsSq=ifelse(twoDatasets, .1^2, 0), sigmaEpsSq2=9*sigmaEpsSq, 
                              rho=-.8, alpha=0, beta=1, n2=n, 
                              sigmaEpsSqNonMount=.1^2, sigmaEpsSqMount=1^2, 
                              sigmaEpsSqNonMountWrong1=.1^2, sigmaEpsSqMountWrong1=.1^2, 
