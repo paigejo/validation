@@ -1429,6 +1429,7 @@ getTransitionErrVar = function(propMount=.3,
       print(sqrt(sigmaSqsNM[colI])) # about 0.2526428
       sigmaSqMSims = rep(1, 4)
       sigmaSqPSims = c(.1^2, 0.0638284, .25, .8)
+      sigmaSqPSims = c(.1^2, 0.07, .25, .8)
       
       
       cols = makeRedBlueDivergingColors(64, valRange=range(fullMat[,3]), center=0)
@@ -1452,6 +1453,32 @@ getTransitionErrVar = function(propMount=.3,
       #            xlab=TeX("$\\sigma_{epsilon,Plains}^2"), ylab=TeX("$\\sigma_{epsilon,Mount}^2"), 
       #            main="Correct model selected", legend.mar=0)
       dev.off()
+      
+      for(k in 1:4) {
+        pdf(paste0("figures/nonstatErrorIllustration/dist_sim", k, "Score", score, "_oversampM", oversampleMountRatio, ".pdf"), width=5.1, height=5)
+        par(mar=c(2.8, 1.3, 2, 1), oma=c(0, 0, 0, 1.5), mgp=c(1.9,.7,0))
+        plot(log10(fullMat[,1]), log10(fullMat[,2]), type="n", axes=FALSE, xlab="", ylab="",
+             main=TeX(paste0("LOO pref to right model ($R_{oversamp}=", oversampleMountRatio, "$)")), asp=1)
+        myQuiltPlot(log10(fullMat[,1]), log10(fullMat[,2]), fullMat[,3], col=cols,
+                    add=TRUE, nx=500, ny=500, legend.mar=1.8)
+        correctBiasIndexMat = matrix(meanDist, nrow=length(sigmaSqsNM), ncol=length(sigmaSqsM))
+        contour(log10(sigmaSqsNM), log10(sigmaSqsM), correctBiasIndexMat, col=rgb(.4,.4,.4), 
+                add=TRUE)
+        axis(1, at=seq(-4, 0, by=2), labels=c(".01^2", ".1^2", "1"), line=-.75)
+        axis(2, at=seq(-4, 0, by=2), labels=c(".01^2", ".1^2", "1"), line=-1.5)
+        mtext(TeX("$\\sigma_{epsilon,Mount}^2"), side=2, line=-.1)
+        mtext(TeX("$\\sigma_{epsilon,Plains}^2"), side=1, line=1.3)
+        points(log10(c(sigmaSqBestDat, .01)), log10(c(sigmaSqBestDat, 1)), pch=19, col=c("purple", "green"))
+        points(log10(sigmaSqPSims[k]), log10(sigmaSqMSims[k]), pch="x")
+        # myQuiltPlot(fullMat[,1], fullMat[,2], fullMat[,3], col=cols, 
+        #            nx=500, ny=500, log="xy", asp=1, addColorBar=TRUE, 
+        #            xlab=TeX("$\\sigma_{epsilon,Plains}^2"), ylab=TeX("$\\sigma_{epsilon,Mount}^2"), 
+        #            main="Correct model selected", legend.mar=0)
+        dev.off()
+      }
+      
+      
+      browser()
     }
     
     # calculate mean effective distance and mean distance from wrong model for IW
